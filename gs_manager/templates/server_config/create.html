@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h1>{% block title %}Server Config{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+<TABLE>
+  <form method=post>
+    <TR><TD><b>Max Players</b></TD><TD><input type=text name=max_players size=2 maxlength=2></TD></TR>
+    <TR><TD><b>Min Level</b></TD><TD><input type=text name=min_level size=2 maxlength=2></TD></TR>
+    <TR><TD><b>Max Level</b></TD><TD><input type=text name=max_level size=2 maxlength=2></TD></TR>
+    <TR><TD><b>Pause And Play (0-1)</b></TD><TD><input type=text name=pause_play size=1 maxlength=1></TD></TR>
+    <TD><li>0 = Game can only be paused by DM<br><li>1 = Game can be paused by players</TD>
+    <TR><TD><b>PVP (0-2)</b></TD><TD><input type=text name=pvp size=1 maxlength=1</TD></TR>
+    <TD><li>0 = None<br><li>1 = Party<br><li>2 = Full</TD>
+    <TR><TD><b>Server Vault (0-1)</b></TD><TD><input type=text name=server_vault size=1 maxlength=1></TD></TR>
+    <TD><li>0 = Local Characters Only<br><li>1 = Server Characters Only</TD>
+    <TR><TD><b>Enforce Legal Characters (0-1)</b></TD><TD><input type=text name=enforce_legal_char size=1 maxlength=1></TD></TR>
+    <TD><li>0 = Don't enforce Legal Characters<br><li>1 = Enforce Legal Characters</TD>
+    <TR><TD><b>Item Level Restrictions (0-1)</b></TD><TD><input type=text name=item_lv_restrictions size=1 maxlength=1></TD></TR>
+    <TD><li>0 = Don't enforce Item Level Restrictions<br><li>1 = Enforce Item Level Restrictions</TD>
+    <TR><TD><b>Game Type (0-12)</b></TD><TD><input type=text name=game_type size=2 maxlength=2></TD></TR>
+    <TD><li>0 = Action <li>1 = Story <li>2 = Story Lite <li>3 = Role Play <li>4 = Team <li>5 = Melee</TD>
+    <TD><li>6 = Arena <li>7 = Social <li>8 = Alternative <li>9 = PW Action <li>10 = PW Story <li>11 = Solo <li>12 = Tech Support</TD>
+    <TR><TD>One Party (0-1)</TD><TD><input type=text name=one_party size=1 maxlength=1></TD></TR>
+    <TD><li>0 = Allow multiple parties<br><li>1 = Only allow one party</TD>
+    <TR><TD>Difficulty (1-4)</TD><TD><input type=text name=difficulty size=1 maxlength=1</TD></TR>
+    <TD><li>1 = Easy <li>2 = Normal</TD>
+    <TD><li>3 = D & D Hardcore <li>4 = Very Difficult</TD>
+    <TR><TD>Auto Save Interval</TD><TD><input type=text name=auto_save_interval size=2 maxlength=2></TD><TD>0 = Disable</TD></TR>
+    <TR><TD>Player Password</TD><TD><input type=password name=player_pwd size=25 maxlength=25></TD><TD>Blank to Disable</TD></TR>
+    <TR><TD>DM Password</TD><TD><input type=password name=dm_pwd size=25 maxlength=25></TD><TD>Blank to Disable</TD></TR>
+    <TR><TD>Admin Password</TD><TD><input type=password name=admin_pwd size=25 maxlength=25></TD><TD>Blank to Disable</TD></TR>
+    <TR><TD>Server Name</TD><TD><input type=text name=server_name size=25 maxlength=255></TD></TR>
+    <TR><TD>Module Name</TD><TD><input type=text name=module_name size=25 maxlength=255></TD></TR>
+    <TR><TD>Public Server (0-1)</TD><TD><input type=text name=public_server size=1 maxlength=1></TD></TR>
+    <TD><li>0 = Do not list server on internet<br><li>1 = List server on internet</TD>
+    <TR><TD>Reload When Empty (0-1)</TD><TD><input type=text name=reload_when_empty size=1 maxlength=1></TD></TR>
+    <TD><li>0 = Module state is persistant as long as server is running<br><li>1 = Module state is reset when the server becomes empty</TD>
+    <TR><TD>Port</TD><TD><input type=text name=port size=5 maxlength=5></TD><TD>Default = 5121</TD></TR>
+    <TR><TD><input type=submit>
+  </form></TD><TD></TD></TR>
+</TABLE>
+{% endblock %}

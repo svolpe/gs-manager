@@ -16,6 +16,11 @@
           <div class="about">Server Name {{ post['module_name'] }} on port {{ post['port'] }}</div>
         </div>
           <a class="action" href="{{ url_for('server_config.update', id=post['id']) }}">Edit</a>
+        {% if server_status == "running" %}
+          <a class="action" href="{{ url_for('blog.update', id=post['id']) }}">stop</a>
+        {% else %}
+          <a class="action" href="{{ url_for('server_config.update', id=post['id']) }}">Start</a>
+        {% endif %}
       </header>
     </article>
     {% if not loop.last %}

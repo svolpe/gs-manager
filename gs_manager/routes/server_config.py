@@ -18,7 +18,8 @@ def index():
     query = db.session.query(
         Config.server_name, Config.port, Config.id, Config.module_name)
 
-    return render_template('server_config/index.html', posts=query)
+    return render_template(
+        'server_config/index.html', posts=query, server_status='running')
 
     # return render_template('blog/index.html', posts=query)
 

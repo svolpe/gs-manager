@@ -4,6 +4,7 @@ from sqlalchemy import text
 
 class Config(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    is_active = db.Column(db.Integer, nullable=False)
     server_name = db.Column(db.String, nullable=False)
     max_players = db.Column(db.Integer, nullable=False)
     min_level = db.Column(db.Integer, nullable=False)
@@ -23,4 +24,5 @@ class Config(db.Model):
     public_server = db.Column(db.Integer, nullable=False)
     reload_when_empty = db.Column(db.Integer, nullable=False)
     module_name = db.Column(db.String, nullable=False)
+    nwn_volume_dir = db.Column(db.String, nullable=False)
     port = db.Column(db.Integer, nullable=False)

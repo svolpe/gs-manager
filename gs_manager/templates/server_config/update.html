@@ -10,7 +10,7 @@
     <TR><TD><b>Max Players</b></TD><TD><input type=text name=max_players size=2 maxlength=2 value="{{ server_cfg['max_players'] }}"></TD></TR>
     <TR><TD><b>Min Level (1)</b></TD><TD><input type=text name=min_level size=2 maxlength=2 value="{{ server_cfg['min_level'] }}"></TD></TR>
     <TR><TD><b>Max Level (60)</b></TD><TD><input type=text name=max_level size=2 maxlength=2 value="{{ server_cfg['max_level'] }}"></TD></TR>
-    <TR><TD><b>Pause And Play (0-1)</b></TD><TD><input type=text name=pause_play size=1 maxlength=1 value="{{ server_cfg['pause_play'] }}"></TD></TR>
+    <TR><TD><b>Pause And Play (0-1)</b></TD><TD><input type=text name=pause_play size=1 min="0" max="1" maxlength=1 value="{{ server_cfg['pause_play'] }}"></TD></TR>
     <TD><li>0 = Game can only be paused by DM<br><li>1 = Game can be paused by players</TD>
     <TR><TD><b>PVP (0-2)</b></TD><TD><input type=text name=pvp size=1 maxlength=1 value="{{ server_cfg['pvp'] }}"></TD></TR>
     <TD><li>0 = None<br><li>1 = Party<br><li>2 = Full</TD>
@@ -39,6 +39,8 @@
     <TR><TD>Reload When Empty (0-1)</TD><TD><input type=text name=reload_when_empty size=1 maxlength=1 value="{{ server_cfg['reload_when_empty'] }}"></TD></TR>
     <TD><li>0 = Module state is persistant as long as server is running<br><li>1 = Module state is reset when the server becomes empty</TD>
     <TR><TD>Port</TD><TD><input type=text name=port size=5 maxlength=5 value="{{ server_cfg['port'] }}"></TD><TD>Default = 5121</TD></TR>
+    <TR><TD>nwn_volume_dir</TD><TD><input type=text name=nwn_volume_dir size=25 maxlength=255 value="{{ server_cfg['nwn_volume_dir'] }}></TD><TD>Location of server vault</TD></TR>
+    <TR><TD>Server Activate?</TD><TD><input type=text name=is_active value="{{ server_cfg['is_active'] }}" size=1 maxlength=1></TD><TD>1 for yes, 0 for no</TD></TR>
     <TR><TD><input type=submit>
   </form></TD><TD></TD></TR>
 </TABLE>

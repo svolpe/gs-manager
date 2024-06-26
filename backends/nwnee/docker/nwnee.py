@@ -67,8 +67,9 @@ if __name__ == "__main__":
 
     client = docker.APIClient()
 
-    server_cfgs = sql_data_to_list_of_dicts("SELECT * FROM Config")
+    server_cfgs = sql_data_to_list_of_dicts("SELECT * FROM config")
 
+    t1 = time.time()
     for cfg in server_cfgs:
         docker_name = "nwn_" + str(cfg['id'])
 
@@ -79,6 +80,8 @@ if __name__ == "__main__":
             server.start()
 
         servers[str(cfg['id'])] = server
+
+    print(f"Time to initialize docker images: {round(time.time() - t1, 1)}s")
 
     get_users_timer_start = time.time()
     while True:
@@ -94,7 +97,7 @@ if __name__ == "__main__":
                 set_cmd_executed(cmd['id'])
 
             elif cmd['cmd'] == 'create':
-                server_cfg = sql_data_to_list_of_dicts("SELECT * FROM Config where id = " + str(cmd['cmd_args']))[0]
+                server_cfg = sql_data_to_list_of_dicts("SELECT * FROM config where id = " + str(cmd['cmd_args']))[0]
                 docker_name = "nwn_" + str(server_cfg['id'])
                 server = NwnServer(cfg, docker_name=docker_name)
                 server.create_container()
@@ -130,8 +133,6 @@ if __name__ == "__main__":
             # TODO: The update/insert users code needs to be seriously refactored
             # Update users table
             if len(last_active_users) or len(active_users):
-                insert_users = dict()
-                update_users = dict()
                 insert_data = list()
                 update_data = list()
                 logoff_data = list()
@@ -141,10 +142,9 @@ if __name__ == "__main__":
                 for key in all_user_keys:
                     # New keys (players) to insert into the user database
                     if key not in last_active_users:
-                        insert_users.update(active_users)
                         user = active_users[key]
-                        insert_data.append((key, user['player_name'], user['char_name'], user['ip'],
-                                            user['docker_name']))
+                        insert_data.append((key, user['player_name'], user['character_name'], user['ip_addr'],
+                                            user['docker_name'], user['server_name']))
                     # Users that are on-going active and need to be updated
                     elif key in active_users:
                         a_user = active_users[key]
@@ -153,17 +153,17 @@ if __name__ == "__main__":
                                 or a_user['docker_name'] != l_user['docker_name']):
                             user = active_users[key]
                             update_data.append((user['player_name'], user['character_name'], user['ip_addr'],
-                                                user['docker_name'], key))
+                                                user['docker_name'], user['server_name'], key))
                     # All remaining ones need to be set as logged off
                     else:
                         logoff_data.append((key,))
                 if len(insert_data):
-                    query = '''insert into pc_active_log(cd_key, player_name, character_name, ip_addr, docker_name)
-                            values(?, ?, ?, ?, ?)'''
+                    query = '''insert into pc_active_log(cd_key, player_name, character_name, ip_addr, docker_name, 
+                            server_name) values(?, ?, ?, ?, ?, ?)'''
                     sql_update_many(query, insert_data)
                 if len(update_data):
-                    query = '''update pc_active_log set player_name=?, character_name=?, ip_addr=?, docker_name=?
-                                where cd_key = ?'''
+                    query = '''update pc_active_log set player_name=?, character_name=?, ip_addr=?, docker_name=?, 
+                    server_name=? where cd_key = ?'''
                     sql_update_many(query, update_data)
                 if len(logoff_data):
                     query = '''update pc_active_log set logoff_time = CURRENT_TIMESTAMP where cd_key = ?'''

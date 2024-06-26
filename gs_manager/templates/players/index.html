@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h1>{% block title %}Logged in users{% endblock %}</h1>
+
+{% endblock %}
+
+{% block content %}
+  {% for post in posts %}
+    <article class="post">
+      <header>
+        <div>
+          <h1>{{ post['player_name'] }}</h1>
+          <div class="about">Character {{ post['character_name'] }} logged onto {{ post['server_name'] }} on {{ post['logon_time'].strftime('%Y-%m-%d at %I:%M:%S %p') }}</div>
+        </div>
+      </header>
+    </article>
+    {% if not loop.last %}
+      <hr>
+    {% endif %}
+  {% endfor %}
+{% endblock %}

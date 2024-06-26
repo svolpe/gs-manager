@@ -4,7 +4,9 @@ from flask import Flask
 from .extensions import db, migrate
 from .models.users import User
 from .models.blog import Post
-from .models.server_conf import Config
+from .models.server_nwn import Config, ServerCmds, PcActiveLog
+
+
 from flask_sqlalchemy import SQLAlchemy
 
 
@@ -40,19 +42,6 @@ def create_app(test_config=None):
     except OSError:
         pass
 
-    # a simple page that says hello
-    @app.route('/hello')
-    def hello():
-        return 'Hello, World!'
-
-    @app.route('/routes')
-    def list_routes():
-
-        #routes_list = app.url_map.iter_rules()
-
-        routes_list = app.url_map
-        return routes_list
-
     from .routes import auth
     app.register_blueprint(auth.bp)
 
@@ -61,6 +50,9 @@ def create_app(test_config=None):
 
     from .routes import server_config
     app.register_blueprint(server_config.sc)
+
+    from .routes import players
+    app.register_blueprint(players.pc)
 
     '''
     app.add_url_rule() associates the endpoint name 'index' with the / url 

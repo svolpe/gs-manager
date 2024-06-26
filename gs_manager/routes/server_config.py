@@ -6,28 +6,14 @@ from werkzeug.exceptions import abort
 from ..routes.auth import login_required
 from sqlalchemy import (delete, insert)
 from ..extensions import db
-from ..models.server_conf import Config
-from ..models.server_cmds import ServerCmds
-import pickle
-import socket
+from ..models.server_nwn import Config, ServerCmds
+
 
 sc = Blueprint('server_config', __name__)
 
 """The best way to move forward (for now) is to have a route that will start all active backends and one to 
     list all active members. There should also be a background job tht 
 """
-HEADERSIZE = 10
-def _socket_send(data):
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((socket.gethostname(), 1243))
-    msg = pickle.dumps(data)
-
-    # Note: ':<' is the alignment operator (left aligned),rso it says how many spaces to left/right in the list
-    msg = bytes(f"{len(msg):<{HEADERSIZE}}", 'utf-8') + msg
-    print(msg)
-    s.send(msg)
-    # s.close()
-
 
 @sc.route('/')
 def index():

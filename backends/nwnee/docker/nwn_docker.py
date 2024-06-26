@@ -62,13 +62,11 @@ class NwnServer:
         """
         raw_user_list = self._get_server_cmd('status\n', start_flt='Server Name:')
 
-        try:
-            if len(raw_user_list):
-                active_users = self._parse_active_users(raw_user_list)
-            else:
-                i = 1 + 1
-        except:
-            i = 1 + 1
+        if len(raw_user_list):
+            active_users = self._parse_active_users(raw_user_list)
+        else:
+            active_users = {}
+
         return active_users
 
     def _parse_active_users(self, raw_data):
@@ -96,11 +94,12 @@ class NwnServer:
 
                 if len(row) == 5:
                     users[row[4].strip()] = {'id': row[0].strip(), 'player_name': row[1].strip(), 'ip_addr': row[2].strip(),
-                                             'character_name': row[3].strip(), 'docker_name': self.docker_name}
+                                             'character_name': row[3].strip(), 'docker_name': self.docker_name,
+                                             'server_name': self.server_cfg['server_name']}
 
         return users
 
-    def _get_server_cmd(self, cmd, start_flt, timeout=10, retry_cnt=3):
+    def _get_server_cmd(self, cmd, start_flt, timeout=3, retry_cnt=3):
         """
         This method sends a command to the server and returns all the data starting at the start_flt string to the
         EOF.
@@ -114,52 +113,22 @@ class NwnServer:
             # Turn off blocking because there is no communications protocol to know the size of a message ahead of time
             self._socket.setblocking(False)
 
-            # Send several end of line to flush out any previously unhandled commands
-            self._socket.send('\n\n'.encode())
-            # Give some time for the server to register the command
-
-            # TODO: 1 second is just a best guess, there might be a better way to handle this
-            time.sleep(1)
             # Send command to the server
             self._socket.send(cmd.encode())
-            # TODO: 1 second is just a best guess, there might be a better way to handle this
-            time.sleep(1)
-
-            # Wait for there to be data to read from the socket
-            select.select([self._socket], [], [], 5)
-
-            # This is set to True once the start filter string pattern is detected
-            received_start_flt = False
-
-            # This is set once recv fails after the string pattern, this *should* represent the EOL.
-            # TODO: This is not a very clean implementation but no better implementation is obvious at this time
-            pkt_complete = False
-            # This will be updated with the start idx of the filter string pattern when it detected
-            start_indx = 0
 
             while True:
                 try:
                     # TODO: investigate increasing the recv size to optimize speed
-                    data_buf += self._socket.recv(1)
+                    data_buf += self._socket.recv(1048)
                 except:
                     # TODO: This makes the assumption that a recv error after the start filter packet is a EOL.
-                    if received_start_flt:
-                        pkt_complete = True
-                    time.sleep(1)
-
-                # Detect the start of the data of interest based on the start filter string
-                if data_buf[-len(start_flt_b):] == start_flt_b and not received_start_flt:
-                    received_start_flt = True
-                    start_indx = len(data_buf) - len(start_flt_b)
-
-                # Once there is an EOF after the start filter match then return the data
-                if pkt_complete and received_start_flt:
-                    data = data_buf[start_indx:]
-                    return data
+                    if start_flt_b in data_buf:
+                        start_index = data_buf.find(start_flt_b)
+                        return data_buf[start_index:]
 
                 # In case the start filter string or the EOF is not detected, this provides a timeout.
                 if time.time() - start_time > timeout:
-                    print('Server send cmd time exceeded timeout time of: ' + str(timeout) + 's')
+                    print(f"cmd time exceeded timeout time of: {timeout}s with retries {retry_cnt} remaining")
                     retry_cnt -= 1
                     start_time = time.time()
                     break

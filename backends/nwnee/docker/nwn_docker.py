@@ -1,20 +1,55 @@
 import docker, time, select
 
+
 # TODO: It might make sense to remove all the low level string manipulation/extraction methods into their own class
+# TODO: Look into better structuring the __init__. Should the client be passed to the constructor or created inside?
+# TODO: Think through how start() should handle if a container exists or is already running.
 
 
 class NwnServer:
-    def __init__(self, server_cfg, image_name='nwnxee/unified', network='host'):
+    def __init__(self, server_cfg, docker_name, image_name='nwnxee/unified', network='host'):
         self._load_cfg(server_cfg)
         self.client = docker.APIClient()
-        cfg_host = self.client.create_host_config(network_mode=network)
-        self.container = self.client.create_container(image_name, name='nwnee_' + str(server_cfg['id']),
+        self._socket = None
+        self.image_name = image_name
+        self.network = network
+        self.docker_name = docker_name
+        self.container = None
+        self.server_cfg = server_cfg
+
+    def get_server_name(self):
+        return self.server_cfg['server_name']
+
+    def remove_container(self):
+        nwn_containers = self.client.containers(filters={"name": self.docker_name})
+        if len(nwn_containers) > 0:
+            container = nwn_containers[0]
+            inspect_dict = self.client.inspect_container(container)
+            state = inspect_dict['State']
+
+            # Remove old container before creating new one
+            if 'Status' in state:
+                if state['Status'] == 'running':
+                    self.client.stop(container)
+                self.client.remove_container(container)
+
+    def create_container(self):
+        # Remove any old copies of the container
+        self.remove_container()
+        cfg_host = self.client.create_host_config(network_mode=self.network)
+
+        self.container = self.client.create_container(self.image_name,
+                                                      name=self.docker_name,
                                                       stdin_open=True,
                                                       host_config=cfg_host, environment=self._cfg)
-        self._socket = None
 
     def container_status(self):
+        # TODO: Look into setting parameters in DB as boolean instead of int.
+        if self.server_cfg['is_active'] == 0:
+            return 'Not Activated'
+
         inspect_dict = self.client.inspect_container(self.container)
+
         state = inspect_dict['State']
         if 'Status' in state:
             return state['Status']
@@ -25,17 +60,23 @@ class NwnServer:
         """
         This method gets and returns the active users
         """
-        raw_user_list = self._get_server_cmd('status\n', start_flt='Server Name:', end_flt='----\n')
-        serv_status = self.raw_user_list(raw_user_list)
+        raw_user_list = self._get_server_cmd('status\n', start_flt='Server Name:')
 
-        return serv_status
+        try:
+            if len(raw_user_list):
+                active_users = self._parse_active_users(raw_user_list)
+            else:
+                i = 1 + 1
+        except:
+            i = 1 + 1
+        return active_users
 
     def _parse_active_users(self, raw_data):
         """
         This method takes a large bitarray string, finds the user table and parses out all the user information into
         a user structure
         """
-        users = list()
+        users = dict()
 
         # Split long string into individual lines and put each one in it's own row
         rows_split = raw_data.decode().split('\n')
@@ -52,8 +93,10 @@ class NwnServer:
             # into final user dictionary
             for user_idx in user_idxs:
                 row = rows_split[user_idx].split('|')
-                users.append([{'id': row[0].strip(), 'player_name': row[1].strip(), 'ip': row[2].strip(),
-                               'char_name': row[3].strip(), 'cd_key': row[4].strip()}])
+
+                if len(row) == 5:
+                    users[row[4].strip()] = {'id': row[0].strip(), 'player_name': row[1].strip(), 'ip_addr': row[2].strip(),
+                                             'character_name': row[3].strip(), 'docker_name': self.docker_name}
 
         return users
 
@@ -105,7 +148,7 @@ class NwnServer:
                     time.sleep(1)
 
                 # Detect the start of the data of interest based on the start filter string
-                if data_buf[-len(start_flt_b):] == start_flt_b:
+                if data_buf[-len(start_flt_b):] == start_flt_b and not received_start_flt:
                     received_start_flt = True
                     start_indx = len(data_buf) - len(start_flt_b)
 
@@ -124,7 +167,6 @@ class NwnServer:
 
     def start(self):
         self.client.start(self.container)
-
         # wait for container to load
         timeout = 10
         while self.container_status() != "running":
@@ -169,4 +211,3 @@ class NwnServer:
         # unused NWN environment variables:
         #    NWN_NWSYNCURL
         #    NWN_NWSYNCHASH
-

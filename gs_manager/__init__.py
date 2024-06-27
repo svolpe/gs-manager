@@ -54,6 +54,9 @@ def create_app(test_config=None):
     from .routes import players
     app.register_blueprint(players.pc)
 
+    from .routes import file_manager
+    app.register_blueprint(file_manager.fm)
+
     '''
     app.add_url_rule() associates the endpoint name 'index' with the / url 
     so that url_for('index') or url_for('blog.index') will both work, 

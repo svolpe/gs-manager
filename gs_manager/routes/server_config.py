@@ -47,7 +47,7 @@ def create():
             db.session.commit()
             return redirect(url_for('index'))
 
-    return render_template('server_config/create.html')
+    return render_template('server_config/create.html', directories=['dir1', 'dir2', 'dir3', 'dir4'])
 
 
 @sc.route('/<int:id>/server_config', methods=['GET', 'POST'])
@@ -71,7 +71,7 @@ def update(id):
             db.session.commit()
             return redirect(url_for('server_config.index'))
 
-    return render_template('server_config/update.html', server_cfg=server_cfg)
+    return render_template('server_config/update.html', server_cfg=server_cfg, directories=['dir1', 'dir2', 'dir3', 'dir4'])
 
 
 @sc.route('/<int:id>/stop', methods=['GET', 'POST'])
@@ -88,3 +88,5 @@ def start(id):
     db.session.add(cmd)
     db.session.commit()
     return redirect(url_for('server_config.index'))
+
+

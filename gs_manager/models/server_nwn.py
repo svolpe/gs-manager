@@ -49,4 +49,15 @@ class Config(db.Model):
     port = db.Column(db.Integer, nullable=False)
 
 
+class PackDirs(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    pack_id = db.Column(db.Integer, nullable=False)
+    dir_src_loc = db.Column(db.String, nullable=False)
+    dir_mount_loc = db.Column(db.String, nullable=False)
+
+
+class PackInfo(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    pack_name = db.Column(db.String, nullable=False)
+    install_dir = db.Column(db.String, nullable=False)
 

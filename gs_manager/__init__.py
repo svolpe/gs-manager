@@ -4,7 +4,7 @@ from flask import Flask
 from .extensions import db, migrate
 from .models.users import User
 from .models.blog import Post
-from .models.server_nwn import Config, ServerCmds, PcActiveLog
+from .models.server_nwn import ServerConfigs, ServerCmds, PcActiveLog, PackInfo, PackDirs
 
 
 from flask_sqlalchemy import SQLAlchemy

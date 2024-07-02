@@ -6,8 +6,12 @@ from werkzeug.exceptions import abort
 from ..routes.auth import login_required
 from sqlalchemy import (delete, insert)
 from ..extensions import db
-from ..models.server_nwn import Config, ServerCmds
+from ..models.server_nwn import ServerConfigs, ServerCmds, PackInfo
 
+from flask_wtf import FlaskForm
+from flask_wtf import FlaskForm
+from wtforms import StringField, FieldList, DecimalField, SelectField, RadioField, IntegerField
+from wtforms.validators import DataRequired, NumberRange
 
 sc = Blueprint('server_config', __name__)
 
@@ -15,22 +19,55 @@ sc = Blueprint('server_config', __name__)
     list all active members. There should also be a background job tht 
 """
 
+
+class ServerConfiguration(FlaskForm):
+    server_name = StringField("Server Name", validators=[DataRequired()])
+    max_players = IntegerField("Max Players", validators=[NumberRange(min=1, max=100)])
+    min_level = IntegerField("Min Level", validators=[NumberRange(min=1, max=60)])
+    max_level = IntegerField("Max Level", validators=[NumberRange(min=1, max=60)])
+    max_level = IntegerField("Max Level", validators=[NumberRange(min=1, max=60)])
+    pause_play = SelectField("Pause And Play", choices=[(0, 'Game only can be paused by DM'),
+                                                        (1, 'Game can be paused by players')])
+    pvp = SelectField("PVP", choices=[(0, 'None'), (1, 'Party'), (2, 'Full')])
+    server_vault = SelectField("Server Vault", choices=[(0, 'Local Characters Only'), (1, 'Server Characters Only')])
+    enforce_legal_char = RadioField('Enforce Legal Characters', choices=[(1, 'Yes'), (0, 'No')])
+    item_lv_restrictions = RadioField('Item Level Restrictions', choices=[(1, 'Yes'), (0, 'No')])
+    game_type = SelectField("Game Type", choices=[(0, 'Action'), (1, 'Story'), (2, 'Story Lite'), (3, 'Role Play'),
+                                                  (4, 'Team'), (5, 'Melee'), (6, 'Arena'), (7, 'Social'),
+                                                  (8, 'Alternative'), (9, 'PW Action'), (10, 'PW Story'), (11, 'Solo'),
+                                                  (12, 'Tech Support')])
+    one_party = SelectField("One Party", choices=[(0, 'Allow multiple parties'), (1, 'Only allow one party')])
+    difficulty = SelectField("Difficulty", choices=[(1, 'Easy'), (2, 'Normal'), (3, 'D&D Hardcore'),
+                                                    (4, 'Very Difficult')])
+    auto_save_interval = IntegerField("Auto Save Interval", validators=[DataRequired()])
+    player_pwd = StringField("Player Password")
+    dm_pwd = StringField("DM Password")
+    admin_pwd = StringField("Admin Password")
+    packs = SelectField('Select a pack', choices=[((1, 'none'), (2, 'cep'))])
+    server_vault_dir = SelectField("Select a server vault dir")
+    module_name = SelectField("Select a Module")
+    server_modules_dir = SelectField("Select a server modules dir")
+    port = IntegerField("Port (5121)", validators=[NumberRange(min=5120, max=5170)])
+    public_server = SelectField("Public Server", choices=[(0, 'Not Public'), (1, 'Public')])
+    reload_when_empty = RadioField('Reload When Empty', choices=[(1, 'Yes'), (0, 'No')])
+    is_active = RadioField('Server Activate?', choices=[(1, 'Yes'), (0, 'No')])
+
+
 @sc.route('/')
 def index():
     query = db.session.query(
-        Config.server_name, Config.port, Config.id, Config.module_name)
+        ServerConfigs.server_name, ServerConfigs.port, ServerConfigs.id, ServerConfigs.module_name)
 
     return render_template(
         'server_config/index.html', posts=query, server_status='running')
 
 
-    # return render_template('blog/index.html', posts=query)
-
-
 @sc.route('/create', methods=('GET', 'POST'))
 def create():
+    form = ServerConfiguration()
+    pack_info = db.session.query(PackInfo.id, PackInfo.name).all()
+    form.packs.choices = pack_info[0]
 
-    # server_cfg = Config()
     error = None
 
     if request.method == 'POST':
@@ -42,18 +79,25 @@ def create():
             flash(error)
         else:
             # Bulk create of server config settings
-            post = Config(**server_cfg)
+            post = ServerConfigs(**server_cfg)
             db.session.add(post)
             db.session.commit()
             return redirect(url_for('index'))
-
-    return render_template('server_config/create.html', directories=['dir1', 'dir2', 'dir3', 'dir4'])
+    return render_template('server_config/wtf_create.html', form=form)
 
 
 @sc.route('/<int:id>/server_config', methods=['GET', 'POST'])
 def update(id):
+    server_cfg = ServerConfigs.query.filter_by(id=id).first()
+    form = ServerConfiguration(data=server_cfg.__dict__)
+    pack_info = db.session.query(PackInfo.id, PackInfo.name).all()
 
-    server_cfg = Config.query.filter_by(id=id).first()
+    # Convert pack info into the format required by forms (list of tuples)
+    pack_list = list()
+    for pack in pack_info:
+        pack_list.append(tuple(pack))
+
+    form.packs.choices = pack_list
 
     if server_cfg is None:
         abort(404, "Post id {0} doesn't exist.".format(id))
@@ -67,11 +111,11 @@ def update(id):
         if error is not None:
             flash(error)
         else:
-            Config.query.filter_by(id=id).update(server_cfg)
+            ServerConfigs.query.filter_by(id=id).update(server_cfg)
             db.session.commit()
             return redirect(url_for('server_config.index'))
 
-    return render_template('server_config/update.html', server_cfg=server_cfg, directories=['dir1', 'dir2', 'dir3', 'dir4'])
+    return render_template('server_config/wtf_create.html', form=form)
 
 
 @sc.route('/<int:id>/stop', methods=['GET', 'POST'])
@@ -88,5 +132,3 @@ def start(id):
     db.session.add(cmd)
     db.session.commit()
     return redirect(url_for('server_config.index'))
-
-

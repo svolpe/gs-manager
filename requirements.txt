@@ -4,3 +4,4 @@ flask~=3.0.3
 werkzeug~=3.0.3
 SQLAlchemy~=2.0.30
 docker~=7.1.0
+wtforms~=3.1.2

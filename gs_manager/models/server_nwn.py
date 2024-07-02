@@ -23,7 +23,7 @@ class ServerCmds(db.Model):
     cmd_executed_time = db.Column(db.TIMESTAMP(timezone=True))
 
 
-class Config(db.Model):
+class ServerConfigs(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     is_active = db.Column(db.Integer, nullable=False)
     server_name = db.Column(db.String, nullable=False)
@@ -44,20 +44,26 @@ class Config(db.Model):
     admin_pwd = db.Column(db.String(80), nullable=False)
     public_server = db.Column(db.Integer, nullable=False)
     reload_when_empty = db.Column(db.Integer, nullable=False)
+    server_vault_dir = db.Column(db.String, nullable=False)
     module_name = db.Column(db.String, nullable=False)
-    nwn_volume_dir = db.Column(db.String, nullable=False)
+    server_modules_dir = db.Column(db.String, nullable=False)
     port = db.Column(db.Integer, nullable=False)
 
 
-class PackDirs(db.Model):
+class VolumesDirs(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    pack_id = db.Column(db.Integer, nullable=False)
+    volumes_info_id = db.Column(db.Integer, nullable=False)
     dir_src_loc = db.Column(db.String, nullable=False)
     dir_mount_loc = db.Column(db.String, nullable=False)
+    read_write = db.Column(db.String, nullable=False)
 
 
-class PackInfo(db.Model):
+class VolumesInfo(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    pack_name = db.Column(db.String, nullable=False)
-    install_dir = db.Column(db.String, nullable=False)
+    name = db.Column(db.String, nullable=False)
+
+
+class ServerVolumes(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String, nullable=False)
 

@@ -1,5 +1,6 @@
-import docker, time, select
-
+import docker
+import time
+import db
 
 # TODO: It might make sense to remove all the low level string manipulation/extraction methods into their own class
 # TODO: Look into better structuring the __init__. Should the client be passed to the constructor or created inside?
@@ -8,20 +9,21 @@ import docker, time, select
 
 class NwnServer:
     def __init__(self, server_cfg, docker_name, image_name='nwnxee/unified', network='host'):
-        self._load_cfg(server_cfg)
+        self._load_nwn_cfg(server_cfg)
         self.client = docker.APIClient()
         self._socket = None
         self.image_name = image_name
         self.network = network
         self.docker_name = docker_name
         self.container = None
+        self.server_cfg_id = server_cfg['id']
         self.server_cfg = server_cfg
 
     def get_server_name(self):
         return self.server_cfg['server_name']
 
     def remove_container(self):
-        nwn_containers = self.client.containers(filters={"name": self.docker_name})
+        nwn_containers = self.client.containers(all=True, filters={"name": self.docker_name})
         if len(nwn_containers) > 0:
             container = nwn_containers[0]
             inspect_dict = self.client.inspect_container(container)
@@ -36,7 +38,8 @@ class NwnServer:
     def create_container(self):
         # Remove any old copies of the container
         self.remove_container()
-        cfg_host = self.client.create_host_config(network_mode=self.network)
+        volumes = db.get_volumes(self.server_cfg_id)
+        cfg_host = self.client.create_host_config(network_mode=self.network, binds=volumes)
 
         self.container = self.client.create_container(self.image_name,
                                                       name=self.docker_name,
@@ -154,7 +157,7 @@ class NwnServer:
     def stop(self):
         self.client.stop(self.container)
 
-    def _load_cfg(self, cfg):
+    def _load_nwn_cfg(self, cfg):
         self._cfg = {
             'NWN_PORT': cfg['port'],
             'NWN_MODULE': cfg['module_name'],

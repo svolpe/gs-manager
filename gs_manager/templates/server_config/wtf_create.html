@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h1>{% block title %}Server Configuration{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flask dynamic WTF forms</title>
+</head>
+<body>
+<form method="POST">
+    <p>{{ form.server_name.label }} {{ form.server_name }}</p>
+    <p>{{ form.max_players.label }} {{ form.max_players }}</p>
+    <p>{{ form.min_level.label }} {{ form.max_level }}</p>
+    <p>{{ form.pause_play.label }} {{ form.pause_play }}</p>
+    <p>{{ form.pvp.label }} {{ form.pvp }}</p>
+    <p>{{ form.server_vault.label }} {{ form.server_vault }}</p>
+    <p>{{ form.enforce_legal_char.label }} {{ form.enforce_legal_char(style="list-style:none") }}</p>
+    <p>{{ form.item_lv_restrictions.label }} {{ form.item_lv_restrictions(style="list-style:none") }}</p>
+    <p>{{ form.game_type.label }} {{ form.game_type }}</p>
+    <p>{{ form.one_party.label }} {{ form.one_party }}</p>
+    <p>{{ form.difficulty.label }} {{ form.difficulty }}</p>
+    <p>{{ form.auto_save_interval.label }} {{ form.auto_save_interval }}</p>
+    <p>{{ form.player_pwd.label }} {{ form.player_pwd }}</p>
+    <p>{{ form.dm_pwd.label }} {{ form.dm_pwd }}</p>
+    <p>{{ form.admin_pwd.label }} {{ form.admin_pwd }}</p>
+    <p>{{ form.nwn_volume_dir.label }} {{ form.nwn_volume_dir }}</p>
+    <p>{{ form.module_name.label }} {{ form.module_name }}</p>
+    <p>{{ form.port.label }} {{ form.port }}</p>
+    <p>{{ form.public_server.label }} {{ form.public_server }}</p>
+    <p>{{ form.reload_when_empty.label }} {{ form.reload_when_empty(style="list-style:none") }}</p>
+    <p>{{ form.is_active.label }} {{ form.is_active(style="list-style:none") }}</p>
+    <input type="submit" value="Submit">
+</form>
+</body>
+</html>
+
+{% endblock %}

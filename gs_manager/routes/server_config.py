@@ -6,7 +6,7 @@ from werkzeug.exceptions import abort
 from ..routes.auth import login_required
 from sqlalchemy import (delete, insert)
 from ..extensions import db
-from ..models.server_nwn import ServerConfigs, ServerCmds, PackInfo
+from ..models.server_nwn import ServerConfigs, ServerCmds, VolumesInfo
 
 from flask_wtf import FlaskForm
 from flask_wtf import FlaskForm
@@ -43,10 +43,7 @@ class ServerConfiguration(FlaskForm):
     player_pwd = StringField("Player Password")
     dm_pwd = StringField("DM Password")
     admin_pwd = StringField("Admin Password")
-    packs = SelectField('Select a pack', choices=[((1, 'none'), (2, 'cep'))])
-    server_vault_dir = SelectField("Select a server vault dir")
     module_name = SelectField("Select a Module")
-    server_modules_dir = SelectField("Select a server modules dir")
     port = IntegerField("Port (5121)", validators=[NumberRange(min=5120, max=5170)])
     public_server = SelectField("Public Server", choices=[(0, 'Not Public'), (1, 'Public')])
     reload_when_empty = RadioField('Reload When Empty', choices=[(1, 'Yes'), (0, 'No')])
@@ -65,7 +62,7 @@ def index():
 @sc.route('/create', methods=('GET', 'POST'))
 def create():
     form = ServerConfiguration()
-    pack_info = db.session.query(PackInfo.id, PackInfo.name).all()
+    pack_info = db.session.query(VolumesInfo.id, VolumesInfo.name).all()
     form.packs.choices = pack_info[0]
 
     error = None
@@ -90,14 +87,6 @@ def create():
 def update(id):
     server_cfg = ServerConfigs.query.filter_by(id=id).first()
     form = ServerConfiguration(data=server_cfg.__dict__)
-    pack_info = db.session.query(PackInfo.id, PackInfo.name).all()
-
-    # Convert pack info into the format required by forms (list of tuples)
-    pack_list = list()
-    for pack in pack_info:
-        pack_list.append(tuple(pack))
-
-    form.packs.choices = pack_list
 
     if server_cfg is None:
         abort(404, "Post id {0} doesn't exist.".format(id))

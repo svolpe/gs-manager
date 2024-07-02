@@ -4,7 +4,7 @@ from flask import Flask
 from .extensions import db, migrate
 from .models.users import User
 from .models.blog import Post
-from .models.server_nwn import ServerConfigs, ServerCmds, PcActiveLog, PackInfo, PackDirs
+from .models.server_nwn import ServerConfigs, ServerCmds, PcActiveLog, VolumesInfo, VolumesDirs, ServerVolumes
 
 
 from flask_sqlalchemy import SQLAlchemy
@@ -56,6 +56,9 @@ def create_app(test_config=None):
 
     from .routes import file_manager
     app.register_blueprint(file_manager.fm)
+
+    from .routes import volume_manager
+    app.register_blueprint(volume_manager.vm)
 
     '''
     app.add_url_rule() associates the endpoint name 'index' with the / url 

@@ -12,6 +12,7 @@ from sqlalchemy import null
 
 pc = Blueprint('players', __name__)
 
+
 @pc.route('/players')
 def index():
     query = (db.session.query(

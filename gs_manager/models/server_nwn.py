@@ -44,9 +44,7 @@ class ServerConfigs(db.Model):
     admin_pwd = db.Column(db.String(80), nullable=False)
     public_server = db.Column(db.Integer, nullable=False)
     reload_when_empty = db.Column(db.Integer, nullable=False)
-    server_vault_dir = db.Column(db.String, nullable=False)
     module_name = db.Column(db.String, nullable=False)
-    server_modules_dir = db.Column(db.String, nullable=False)
     port = db.Column(db.Integer, nullable=False)
 
 
@@ -61,9 +59,11 @@ class VolumesDirs(db.Model):
 class VolumesInfo(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String, nullable=False)
+    description = db.Column(db.String)
 
 
 class ServerVolumes(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    server_configs_id = db.Column(db.Integer, nullable=False)
     name = db.Column(db.String, nullable=False)
 

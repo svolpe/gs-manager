@@ -1,9 +1,9 @@
 {% extends 'base.html' %}
 
 {% block header %}
-  <h1>{% block title %}Volume Manager{% endblock %}</h1>
+  <h1>{% block title %}Volume Manager Groups{% endblock %}</h1>
   {% if g.user %}
-    <a class="action" href="{{ url_for('volume_manager.index') }}">New</a>
+    <a class="action" href="{{ url_for('volume_manager.create') }}">New Group</a>
   {% endif %}
 {% endblock %}
 
@@ -12,24 +12,25 @@
     <article class="post">
       <header>
         <div>
-          <h1>{{ volume }}</h1>
           <div class="about">
             <table>
                 <tr>
+                  <th><h1>{{ volume }}</h1></th>
+                  <th></th>
+                  <th><a class="action" href="{{ url_for('volume_manager.edit', id=volumes[volume]['volume_info_id']) }}"><h1>Edit</h1></a></th>
+                </tr>
+                <tr>
                   <th>Server Mount Directory</th>
                   <th>Source Directory</th>
-                  <th><a class="action" href="{{ url_for('volume_manager.index') }}">add</a></th>
                   <th></th>
                 </tr>
                 {% for mnt in volumes[volume] %}
-                <tr>
-                  <td>{{ volumes[volume][mnt]['mount_loc'] }}</td>
-                  {% if mnt != 'description' %}
-                    <td>{{ mnt }}</td>
-                    <td><a class="action" href="{{ url_for('volume_manager.index', id=volumes[volume][mnt]['id']) }}">edit</a></td>
-                    <td><a class="action" href="{{ url_for('volume_manager.delete', id=volumes[volume][mnt]['id']) }}">delete</a></td>
-                  {% endif %}
-                </tr>
+                    {% if mnt != 'description' and mnt != 'volume_info_id' %}
+                        <tr>
+                            <td>{{ volumes[volume][mnt]['mount_loc'] }}</td>
+                            <td>{{ mnt }}</td>
+                        </tr>
+                    {% endif %}
                 {% endfor %}
 
               </table>

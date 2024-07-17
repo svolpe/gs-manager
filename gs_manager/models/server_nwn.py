@@ -50,9 +50,10 @@ class ServerConfigs(db.Model):
 
 class VolumesDirs(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    active = db.Column(db.Integer, nullable=False)
     volumes_info_id = db.Column(db.Integer, nullable=False)
     dir_src_loc = db.Column(db.String, nullable=False)
-    dir_mount_loc = db.Column(db.String, nullable=False)
+    dir_mount_loc = db.Column(db.String, nullable=True)
     read_write = db.Column(db.String, nullable=False)
 
 

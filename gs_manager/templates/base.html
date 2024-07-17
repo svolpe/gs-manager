@@ -6,6 +6,7 @@
   <ul>
     {% if g.user %}
       <li><span>{{ g.user['username'] }}</span>
+      <li><a href="{{ url_for('file_manager.root') }}">File Manager</a>
       <li><a href="{{ url_for('server_config.index') }}">Server Configurations</a>
       <li><a href="{{ url_for('players.index') }}">Logged In Players</a>
       <li><a href="{{ url_for('volume_manager.index') }}">Volumes Manager</a>

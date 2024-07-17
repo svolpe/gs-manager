@@ -1,13 +1,94 @@
 from flask import (
-    Blueprint, flash, redirect, render_template, request, url_for, g
+    Blueprint, flash, redirect, render_template, request, url_for, g, render_template_string
 )
 
+import os
+import subprocess
+import shutil
+
+PATH_STORAGE = '/home/shane/dev/gs-manager/instance/docker_storage'
 
 fm = Blueprint('file_manager', __name__)
 
 
+def listdir_no_hidden(path):
+    for f in os.listdir(path):
+        if not f.startswith('.'):
+            return f
+
+def prefix_removal(text, prefixes):
+    first_word = text.split()[0]
+    if first_word.startswith(prefixes):
+        return text[len(prefixes):]
+    return text
+
+
 @fm.route('/files/upload', methods=['GET', 'POST'])
-def upload():
+def uploadb():
     # if request.method == 'POST':
     # return redirect(url_for('server_config.upload'))
-    return render_template('file_manager/upload.html', modules=[{'module_name': 'mod1', 'dir_location': 'dir1'}, {'module_name': 'mod2', 'dir_location': 'dir2'}])
+    return render_template('file_manager/upload.html', modules=[{'module_name': 'mod1', 'dir_location': 'dir1'},
+                                                                {'module_name': 'mod2', 'dir_location': 'dir2'}])
+
+
+# handle root route
+@fm.route('/file_manager/')
+def root():
+    cwd = os.getcwd()
+    shared_prefix = os.path.commonprefix([cwd, PATH_STORAGE])
+    if shared_prefix != PATH_STORAGE:
+        cwd = PATH_STORAGE
+        os.chdir(cwd)
+    file_list2 = os.listdir(cwd)
+    file_list = subprocess.check_output('ls', shell=True).decode('utf-8').split('\n')  # use 'dir' command on Windows
+    return render_template('file_manager/index.html', file_list=file_list2,
+                           cwd=cwd, )
+
+
+# handle 'cd' command
+@fm.route('/file_manager/cd')
+def cd():
+    # run 'level up' command
+    path = request.args.get('path')
+    abs_path = os.path.abspath(path)
+    shared_prefix = os.path.commonprefix([abs_path, PATH_STORAGE])
+    # Make sure there is not a request to leave game storage directory
+    if shared_prefix == PATH_STORAGE:
+        os.chdir(path)
+
+    # redirect to file manager
+    return redirect('/file_manager/')
+
+
+# handle 'make directory' command
+@fm.route('/file_manager/md')
+def md():
+    # create new folder
+    os.mkdir(request.args.get('folder'))
+
+    # redirect to fole manager
+    return redirect('/file_manager/')
+
+
+# handle 'make directory' command
+@fm.route('/file_manager/rm')
+def rm():
+    cwd = os.getcwd()
+    shared_prefix = os.path.commonprefix([cwd, PATH_STORAGE])
+
+    # The following command protects against deleting files outside of the storage.
+    if shared_prefix != PATH_STORAGE:
+        return 'bad request!', 400
+    else:
+        # remove certain directory
+        shutil.rmtree(cwd + '/' + request.args.get('dir'))
+        # redirect to file manager
+        return redirect('/file_manager/')
+
+
+# view text files
+@fm.route('/file_manager/view')
+def view():
+    # get the file content
+    with open(request.args.get('file')) as f:
+        return f.read().replace('\n', '<br>')

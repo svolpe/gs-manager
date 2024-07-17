@@ -28,7 +28,7 @@ def create_app(test_config=None):
     migrate.init_app(app, db)
     with app.app_context():
         db.create_all()
-
+    app.config['SQLALCHEMY_ECHO'] = True
     if test_config is None:
         # load the instance config, if it exists, when not testing
         app.config.from_pyfile('config.py', silent=True)

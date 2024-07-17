@@ -10,8 +10,8 @@ from ..models.server_nwn import ServerConfigs, ServerCmds, VolumesInfo
 
 from flask_wtf import FlaskForm
 from flask_wtf import FlaskForm
-from wtforms import StringField, FieldList, DecimalField, SelectField, RadioField, IntegerField
-from wtforms.validators import DataRequired, NumberRange
+from wtforms import StringField, FieldList, DecimalField, SelectField, RadioField, IntegerField, SelectMultipleField
+from wtforms.validators import InputRequired, NumberRange
 
 sc = Blueprint('server_config', __name__)
 
@@ -21,7 +21,7 @@ sc = Blueprint('server_config', __name__)
 
 
 class ServerConfiguration(FlaskForm):
-    server_name = StringField("Server Name", validators=[DataRequired()])
+    server_name = StringField("Server Name", validators=[InputRequired()])
     max_players = IntegerField("Max Players", validators=[NumberRange(min=1, max=100)])
     min_level = IntegerField("Min Level", validators=[NumberRange(min=1, max=60)])
     max_level = IntegerField("Max Level", validators=[NumberRange(min=1, max=60)])
@@ -39,7 +39,7 @@ class ServerConfiguration(FlaskForm):
     one_party = SelectField("One Party", choices=[(0, 'Allow multiple parties'), (1, 'Only allow one party')])
     difficulty = SelectField("Difficulty", choices=[(1, 'Easy'), (2, 'Normal'), (3, 'D&D Hardcore'),
                                                     (4, 'Very Difficult')])
-    auto_save_interval = IntegerField("Auto Save Interval", validators=[DataRequired()])
+    auto_save_interval = IntegerField("Auto Save Interval", validators=[InputRequired()])
     player_pwd = StringField("Player Password")
     dm_pwd = StringField("DM Password")
     admin_pwd = StringField("Admin Password")
@@ -47,6 +47,7 @@ class ServerConfiguration(FlaskForm):
     port = IntegerField("Port (5121)", validators=[NumberRange(min=5120, max=5170)])
     public_server = SelectField("Public Server", choices=[(0, 'Not Public'), (1, 'Public')])
     reload_when_empty = RadioField('Reload When Empty', choices=[(1, 'Yes'), (0, 'No')])
+    volumes = SelectMultipleField()
     is_active = RadioField('Server Activate?', choices=[(1, 'Yes'), (0, 'No')])
 
 

@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h1>{% block title %}Delete Confirmation{% endblock %}</h1>
+
+{% endblock %}
+
+{% block content %}
+<form
+    method="post"
+    onsubmit="return confirm('Are you sure you wish to delete {{ file_name }}?');">
+...
+<input type="submit" value="Delete">
+</form>
+
+{% endblock %}

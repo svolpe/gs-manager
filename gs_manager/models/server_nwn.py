@@ -54,7 +54,7 @@ class VolumesDirs(db.Model):
     volumes_info_id = db.Column(db.Integer, nullable=False)
     dir_src_loc = db.Column(db.String, nullable=False)
     dir_mount_loc = db.Column(db.String, nullable=True)
-    read_write = db.Column(db.String, nullable=False)
+    read_write = db.Column(db.String, nullable=True)
 
 
 class VolumesInfo(db.Model):

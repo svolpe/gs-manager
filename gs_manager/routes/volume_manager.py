@@ -12,9 +12,7 @@ from wtforms import (StringField, FieldList, DecimalField, SelectField, RadioFie
                      FormField, Form, HiddenField, )
 
 from wtforms.validators import InputRequired
-
-# TODO: Move this into some sort of config file or database
-PATH_STORAGE = '/home/shane/dev/gs-manager/instance/docker_storage'
+from ..extensions import PATH_STORAGE
 
 vm = Blueprint('volume_manager', __name__)
 

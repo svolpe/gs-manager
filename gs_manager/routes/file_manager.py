@@ -5,9 +5,7 @@ from flask import (
 import os
 import subprocess
 import shutil
-
-PATH_UPLOAD_BASE = "/home/shane/dev/gs-manager/"
-PATH_STORAGE = '/home/shane/dev/gs-manager/instance/docker_storage'
+from ..extensions import PATH_STORAGE
 
 fm = Blueprint('file_manager', __name__)
 

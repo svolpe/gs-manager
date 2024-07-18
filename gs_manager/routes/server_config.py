@@ -22,37 +22,37 @@ sc = Blueprint('server_config', __name__)
 
 class ServerConfiguration(FlaskForm):
     server_name = StringField("Server Name", validators=[InputRequired()])
-    max_players = IntegerField("Max Players", validators=[NumberRange(min=1, max=100)])
-    min_level = IntegerField("Min Level", validators=[NumberRange(min=1, max=60)])
-    max_level = IntegerField("Max Level", validators=[NumberRange(min=1, max=60)])
-    max_level = IntegerField("Max Level", validators=[NumberRange(min=1, max=60)])
+    max_players = IntegerField("Max Players", validators=[NumberRange(min=1, max=100), InputRequired()])
+    min_level = IntegerField("Min Level", validators=[NumberRange(min=1, max=60), InputRequired()])
+    max_level = IntegerField("Max Level", validators=[NumberRange(min=1, max=60), InputRequired()])
     pause_play = SelectField("Pause And Play", choices=[(0, 'Game only can be paused by DM'),
-                                                        (1, 'Game can be paused by players')])
-    pvp = SelectField("PVP", choices=[(0, 'None'), (1, 'Party'), (2, 'Full')])
-    server_vault = SelectField("Server Vault", choices=[(0, 'Local Characters Only'), (1, 'Server Characters Only')])
-    enforce_legal_char = RadioField('Enforce Legal Characters', choices=[(1, 'Yes'), (0, 'No')])
-    item_lv_restrictions = RadioField('Item Level Restrictions', choices=[(1, 'Yes'), (0, 'No')])
+                                                        (1, 'Game can be paused by players')], validators=[InputRequired()])
+    pvp = SelectField("PVP", choices=[(0, 'None'), (1, 'Party'), (2, 'Full')], validators=[InputRequired()])
+    server_vault = SelectField("Server Vault", choices=[(0, 'Local Characters Only'), (1, 'Server Characters Only')], validators=[InputRequired()])
+    enforce_legal_char = RadioField('Enforce Legal Characters', choices=[(1, 'Yes'), (0, 'No'), ], validators=[InputRequired()])
+    item_lv_restrictions = RadioField('Item Level Restrictions', choices=[(1, 'Yes'), (0, 'No')], validators=[InputRequired()])
     game_type = SelectField("Game Type", choices=[(0, 'Action'), (1, 'Story'), (2, 'Story Lite'), (3, 'Role Play'),
                                                   (4, 'Team'), (5, 'Melee'), (6, 'Arena'), (7, 'Social'),
                                                   (8, 'Alternative'), (9, 'PW Action'), (10, 'PW Story'), (11, 'Solo'),
-                                                  (12, 'Tech Support')])
-    one_party = SelectField("One Party", choices=[(0, 'Allow multiple parties'), (1, 'Only allow one party')])
+                                                  (12, 'Tech Support')], validators=[InputRequired()])
+    one_party = SelectField("One Party", choices=[(0, 'Allow multiple parties'), (1, 'Only allow one party')], validators=[InputRequired()])
     difficulty = SelectField("Difficulty", choices=[(1, 'Easy'), (2, 'Normal'), (3, 'D&D Hardcore'),
-                                                    (4, 'Very Difficult')])
+                                                    (4, 'Very Difficult')], validators=[InputRequired()])
     auto_save_interval = IntegerField("Auto Save Interval", validators=[InputRequired()])
     player_pwd = StringField("Player Password")
     dm_pwd = StringField("DM Password")
     admin_pwd = StringField("Admin Password")
-    module_name = SelectField("Select a Module")
-    port = IntegerField("Port (5121)", validators=[NumberRange(min=5120, max=5170)])
-    public_server = SelectField("Public Server", choices=[(0, 'Not Public'), (1, 'Public')])
-    reload_when_empty = RadioField('Reload When Empty', choices=[(1, 'Yes'), (0, 'No')])
+    module_name = SelectField("Select a Module", choices=[("DockerDemo", "DockerDemo"),], validators=[InputRequired()])
+    port = IntegerField("Port (5121)", validators=[NumberRange(min=5120, max=5170), InputRequired()])
+    public_server = SelectField("Public Server", choices=[(0, 'Not Public'), (1, 'Public')], validators=[InputRequired()])
+    reload_when_empty = RadioField('Reload When Empty', choices=[(1, 'Yes'), (0, 'No')], validators=[InputRequired()])
     volumes = SelectMultipleField()
-    is_active = RadioField('Server Activate?', choices=[(1, 'Yes'), (0, 'No')])
+    is_active = RadioField('Server Activate?', choices=[(1, 'Yes'), (0, 'No')], validators=[InputRequired()])
 
 
 class ServerConfigDynamic(FlaskForm):
     configuration = FieldList(FormField(ServerConfiguration), min_entries=0)
+
 
 @sc.route('/')
 def index():
@@ -74,13 +74,13 @@ def create():
     for volume in volumes:
         volume_list.append(tuple(volume))
 
-#    test = [('cpp', 'C++'), ('py', 'Python'), ('text', 'Plain Text')]
-    form.volumes.choices = volume_list #[pack_info]
+    form.volumes.choices = volume_list
 
     error = None
 
     if request.method == 'POST':
         server_cfg = request.form.to_dict()
+        del server_cfg["volumes"]
         if not server_cfg['server_name']:
             error = 'server name is required.'
 
@@ -91,6 +91,16 @@ def create():
             post = ServerConfigs(**server_cfg)
             db.session.add(post)
             db.session.commit()
+
+            # Add New Volumes if there are any
+            server_cfg_vols = request.form.to_dict(flat=False)
+            if 'volumes' in server_cfg_vols:
+                volumes_info_id = server_cfg_vols['volumes']
+                for vol_info_id in volumes_info_id:
+                    row = ServerVolumes(server_configs_id=post.id, volumes_info_id=vol_info_id)
+                    db.session.add(row)
+                db.session.commit()
+
             return redirect(url_for('index'))
     return render_template('server_config/wtf_create.html', form=form)
 
@@ -117,15 +127,13 @@ def update(id):
     error = None
     if request.method == 'POST':
 
-        # Handle volumes
-        server_cfg = request.form.to_dict(flat=False)
-
         # Delete old volumes
         ServerVolumes.query.filter(ServerVolumes.server_configs_id == id).delete()
         db.session.commit()
 
         # Add New Volumes if there are any
-        if 'volumes' in server_cfg:
+        server_cfg_vols = request.form.to_dict(flat=False)
+        if 'volumes' in server_cfg_vols:
             volumes_info_id = server_cfg['volumes']
             for vol_info_id in volumes_info_id:
                 row = ServerVolumes(server_configs_id=id, volumes_info_id=vol_info_id)

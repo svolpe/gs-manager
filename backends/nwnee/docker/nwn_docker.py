@@ -165,7 +165,7 @@ class NwnServer:
             'NWN_PUBLICSERVER': cfg['public_server'],
             'NWN_MAXCLIENTS': cfg['max_players'],
             'NWN_MINLEVEL': cfg['min_level'],
-            'NWN_MAXLEVEL': cfg['max_players'],
+            'NWN_MAXLEVEL': cfg['max_level'],
             'NWN_PAUSEANDPLAY': cfg['pause_play'],
             'NWN_PVP': cfg['pvp'],
             'NWN_SERVERVAULT': cfg['server_vault'],

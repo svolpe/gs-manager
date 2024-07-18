@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h1>{% block title %}File Manager{% endblock %}</h1>
+
+{% endblock %}
+
+{% block content %}
+<html>
+   <head>
+      <title>success</title>
+   </head>
+   <body>
+      <p>File uploaded successfully</p>
+      <p>File Name: {{name}}</p>
+   </body>
+</html>
+{% endblock %}

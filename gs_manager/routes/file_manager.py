@@ -6,6 +6,7 @@ import os
 import subprocess
 import shutil
 
+PATH_UPLOAD_BASE = "/home/shane/dev/gs-manager/"
 PATH_STORAGE = '/home/shane/dev/gs-manager/instance/docker_storage'
 
 fm = Blueprint('file_manager', __name__)
@@ -16,6 +17,7 @@ def listdir_no_hidden(path):
         if not f.startswith('.'):
             return f
 
+
 def prefix_removal(text, prefixes):
     first_word = text.split()[0]
     if first_word.startswith(prefixes):
@@ -23,12 +25,20 @@ def prefix_removal(text, prefixes):
     return text
 
 
-@fm.route('/files/upload', methods=['GET', 'POST'])
-def uploadb():
-    # if request.method == 'POST':
-    # return redirect(url_for('server_config.upload'))
-    return render_template('file_manager/upload.html', modules=[{'module_name': 'mod1', 'dir_location': 'dir1'},
-                                                                {'module_name': 'mod2', 'dir_location': 'dir2'}])
+@fm.route('/file_manager/upload', methods=['GET', 'POST'])
+def upload():
+    if request.method == 'POST':
+        f = request.files['file']
+        cwd = os.getcwd()
+        file_path = os.path.join(cwd, f.filename)
+
+        # If the file already exists then delete it first
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+        f.save(file_path)
+        return render_template("file_manager/upload_success.html", name=f.filename)
+
 
 
 # handle root route

@@ -6,11 +6,11 @@ from werkzeug.exceptions import abort
 from ..routes.auth import login_required
 from sqlalchemy import (delete, insert)
 from ..extensions import db
-from ..models.server_nwn import ServerConfigs, ServerCmds, VolumesInfo
+from ..models.server_nwn import ServerConfigs, ServerCmds, VolumesInfo,ServerVolumes
 
 from flask_wtf import FlaskForm
 from flask_wtf import FlaskForm
-from wtforms import StringField, FieldList, DecimalField, SelectField, RadioField, IntegerField, SelectMultipleField
+from wtforms import StringField, FieldList, SelectField, RadioField, IntegerField, SelectMultipleField, FormField
 from wtforms.validators import InputRequired, NumberRange
 
 sc = Blueprint('server_config', __name__)
@@ -51,6 +51,9 @@ class ServerConfiguration(FlaskForm):
     is_active = RadioField('Server Activate?', choices=[(1, 'Yes'), (0, 'No')])
 
 
+class ServerConfigDynamic(FlaskForm):
+    configuration = FieldList(FormField(ServerConfiguration), min_entries=0)
+
 @sc.route('/')
 def index():
     query = db.session.query(
@@ -62,9 +65,17 @@ def index():
 
 @sc.route('/create', methods=('GET', 'POST'))
 def create():
+
     form = ServerConfiguration()
-    pack_info = db.session.query(VolumesInfo.id, VolumesInfo.name).all()
-    form.packs.choices = pack_info[0]
+
+    volumes = db.session.query(VolumesInfo.id, VolumesInfo.name).all()
+
+    volume_list = []
+    for volume in volumes:
+        volume_list.append(tuple(volume))
+
+#    test = [('cpp', 'C++'), ('py', 'Python'), ('text', 'Plain Text')]
+    form.volumes.choices = volume_list #[pack_info]
 
     error = None
 
@@ -84,17 +95,49 @@ def create():
     return render_template('server_config/wtf_create.html', form=form)
 
 
+# TODO: This route needs to be refactored, it has gotten quite big and using the dict for db might not be the best idea.
 @sc.route('/<int:id>/server_config', methods=['GET', 'POST'])
 def update(id):
     server_cfg = ServerConfigs.query.filter_by(id=id).first()
-    form = ServerConfiguration(data=server_cfg.__dict__)
 
     if server_cfg is None:
         abort(404, "Post id {0} doesn't exist.".format(id))
 
+    form = ServerConfiguration(data=server_cfg.__dict__)
+
+    volumes = db.session.query(VolumesInfo.id, VolumesInfo.name).all()
+
+    volume_list = []
+    for volume in volumes:
+        volume_list.append(tuple(volume))
+
+    #    test = [('cpp', 'C++'), ('py', 'Python'), ('text', 'Plain Text')]
+    form.volumes.choices = volume_list  # [pack_info]
+
     error = None
     if request.method == 'POST':
-        server_cfg = request.form.to_dict()
+
+        # Handle volumes
+        server_cfg = request.form.to_dict(flat=False)
+
+        # Delete old volumes
+        ServerVolumes.query.filter(ServerVolumes.server_configs_id == id).delete()
+        db.session.commit()
+
+        # Add New Volumes if there are any
+        if 'volumes' in server_cfg:
+            volumes_info_id = server_cfg['volumes']
+            for vol_info_id in volumes_info_id:
+                row = ServerVolumes(server_configs_id=id, volumes_info_id=vol_info_id)
+                db.session.add(row)
+            db.session.commit()
+
+        # Get flat dict so it can be directly passed to the update
+        server_cfg = request.form.to_dict(flat=True)
+
+        # Remove volumes from the dict since its not part of the db
+        del server_cfg["volumes"]
+
         if not server_cfg['server_name']:
             error = 'server name is required.'
 

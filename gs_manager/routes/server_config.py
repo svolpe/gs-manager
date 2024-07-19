@@ -55,6 +55,7 @@ class ServerConfiguration(FlaskForm):
                                 validators=[InputRequired()])
     reload_when_empty = RadioField('Reload When Empty', choices=[(1, 'Yes'), (0, 'No')], validators=[InputRequired()])
     volumes = SelectMultipleField()
+    database = RadioField('Use SQL Database?', choices=[('yes', 'Yes'), ('no', 'No')], validators=[InputRequired()])
     is_active = RadioField('Server Activate?', choices=[(1, 'Yes'), (0, 'No')], validators=[InputRequired()])
 
 

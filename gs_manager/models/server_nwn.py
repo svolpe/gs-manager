@@ -26,6 +26,7 @@ class ServerCmds(db.Model):
 class ServerConfigs(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     is_active = db.Column(db.Integer, nullable=False)
+    database = db.Column(db.Integer, nullable=False)
     server_name = db.Column(db.String, nullable=False)
     max_players = db.Column(db.Integer, nullable=False)
     min_level = db.Column(db.Integer, nullable=False)

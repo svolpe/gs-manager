@@ -180,6 +180,15 @@ class NwnServer:
             'NWN_DMPASSWORD': cfg['dm_pwd'],
             'NWN_ADMINPASSWORD': cfg['admin_pwd']
         }
+        # TODO: This is a temporary hack for DB support a full configuration interface will be added later
+        if cfg['database'] == 'yes':
+            self._cfg['NWNX_SQL_DATABASE'] = "nwn"
+            self._cfg['NWNX_SQL_PASSWORD'] = "atbp1994"
+            self._cfg['NWNX_SQL_USERNAME'] = "nwn"
+            self._cfg['NWNX_SQL_HOST'] = "172.17.0.1"
+            self._cfg['NWNX_SQL_PORT'] = "3306"
+            self._cfg['NWNX_SQL_TYPE'] = "MYSQL"
+
         # unused NWN environment variables:
         #    NWN_NWSYNCURL
         #    NWN_NWSYNCHASH

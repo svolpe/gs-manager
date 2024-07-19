@@ -80,13 +80,17 @@ class NwnServer:
         users = dict()
 
         # Split long string into individual lines and put each one in it's own row
-        rows_split = raw_data.decode().split('\n')
+        user_idxs = []
+        try:
+            rows_split = raw_data.decode().split('\n')
+            # Find rows with the table column delimiter '|' in them
+            user_idxs = [i for i, row in enumerate(rows_split) if '|' in row]
 
-        # Find rows with the table column delimiter '|' in them
-        user_idxs = [i for i, row in enumerate(rows_split) if '|' in row]
+            # Remove the column labels from table
+            user_idxs.pop(0)
 
-        # Remove the column labels from table
-        user_idxs.pop(0)
+        except:
+            print("bad decode!")
 
         if len(user_idxs) > 0:
 
@@ -158,6 +162,7 @@ class NwnServer:
         self.client.stop(self.container)
 
     def _load_nwn_cfg(self, cfg):
+        # See https://nwnxee.github.io/unified/group__nwnx.html
         self._cfg = {
             'NWN_PORT': cfg['port'],
             'NWN_MODULE': cfg['module_name'],
@@ -189,6 +194,8 @@ class NwnServer:
             self._cfg['NWNX_SQL_PORT'] = "3306"
             self._cfg['NWNX_SQL_TYPE'] = "MYSQL"
             self._cfg['NWNX_SQL_SKIP'] = 'n'
+            self._cfg['NWNX_CORE_SKIP_ALL'] = 'n'
+
 
         # unused NWN environment variables:
         #    NWN_NWSYNCURL

@@ -9,14 +9,14 @@ from ..extensions import db
 from ..models.server_nwn import PcActiveLog
 from sqlalchemy import null
 
-
 pc = Blueprint('players', __name__)
 
 
 @pc.route('/players')
 def index():
     query = (db.session.query(
-        PcActiveLog.player_name, PcActiveLog.logon_time, PcActiveLog.docker_name, PcActiveLog.server_name)
+        PcActiveLog.player_name, PcActiveLog.logon_time, PcActiveLog.docker_name, PcActiveLog.server_name,
+        PcActiveLog.character_name)
              .filter(PcActiveLog.logoff_time.is_(None)))
 
     return render_template(

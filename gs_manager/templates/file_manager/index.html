@@ -28,7 +28,7 @@
 
               <li><a href="/file_manager/cd?path=..">..</a></li>
               {% for item in file_list %}
-                {% if '.' not in item %}
+                {% if '.' != item[0] %}
                   <li><strong><a href="/file_manager/cd?path={{cwd + '/' + item}}">{{item}}</a></strong><a href="/file_manager/rm?dir={{item}}"> (Delete)</a></li>
                 {% elif '.txt' in item or '.py' in item or '.json' in item %}
                   <li><strong><a href="/file_manager/view?file={{cwd + '/' + item}}">{{item}}</a></strong></li>

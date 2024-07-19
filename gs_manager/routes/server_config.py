@@ -88,7 +88,8 @@ def create():
 
     if request.method == 'POST':
         server_cfg = request.form.to_dict()
-        del server_cfg["volumes"]
+        if "volumes" in server_cfg:
+            del server_cfg["volumes"]
         if not server_cfg['server_name']:
             error = 'server name is required.'
 

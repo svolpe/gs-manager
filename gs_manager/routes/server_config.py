@@ -25,8 +25,8 @@ sc = Blueprint('server_config', __name__)
 class ServerConfiguration(FlaskForm):
     server_name = StringField("Server Name", validators=[InputRequired()])
     max_players = IntegerField("Max Players", validators=[NumberRange(min=1, max=100), InputRequired()])
-    min_level = IntegerField("Min Level", validators=[NumberRange(min=1, max=60), InputRequired()])
-    max_level = IntegerField("Max Level", validators=[NumberRange(min=1, max=60), InputRequired()])
+    min_level = IntegerField("Min Level", validators=[NumberRange(min=1, max=40), InputRequired()])
+    max_level = IntegerField("Max Level", validators=[NumberRange(min=1, max=40), InputRequired()])
     pause_play = SelectField("Pause And Play", choices=[(0, 'Game only can be paused by DM'),
                                                         (1, 'Game can be paused by players')],
                              validators=[InputRequired()])
@@ -154,7 +154,8 @@ def update(id):
         for file in os.listdir(dir):
             # check only text files
             if file.endswith('.mod'):
-                server_modules.append(tuple([file,file]))
+                mod_name = os.path.splitext(file)[0]
+                server_modules.append(tuple([mod_name,mod_name]))
         form.module_name.choices = server_modules
 
     form.module_name.default = server_cfg.module_name

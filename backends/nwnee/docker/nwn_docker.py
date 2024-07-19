@@ -188,6 +188,7 @@ class NwnServer:
             self._cfg['NWNX_SQL_HOST'] = "172.17.0.1"
             self._cfg['NWNX_SQL_PORT'] = "3306"
             self._cfg['NWNX_SQL_TYPE'] = "MYSQL"
+            self._cfg['NWNX_SQL_SKIP'] = 'n'
 
         # unused NWN environment variables:
         #    NWN_NWSYNCURL

@@ -6,12 +6,14 @@ from werkzeug.exceptions import abort
 from ..routes.auth import login_required
 from sqlalchemy import (delete, insert)
 from ..extensions import db
-from ..models.server_nwn import ServerConfigs, ServerCmds, VolumesInfo,ServerVolumes
+from ..models.server_nwn import ServerConfigs, ServerCmds, VolumesInfo, ServerVolumes, VolumesDirs
 
 from flask_wtf import FlaskForm
 from flask_wtf import FlaskForm
 from wtforms import StringField, FieldList, SelectField, RadioField, IntegerField, SelectMultipleField, FormField
 from wtforms.validators import InputRequired, NumberRange
+
+import os
 
 sc = Blueprint('server_config', __name__)
 
@@ -26,25 +28,31 @@ class ServerConfiguration(FlaskForm):
     min_level = IntegerField("Min Level", validators=[NumberRange(min=1, max=60), InputRequired()])
     max_level = IntegerField("Max Level", validators=[NumberRange(min=1, max=60), InputRequired()])
     pause_play = SelectField("Pause And Play", choices=[(0, 'Game only can be paused by DM'),
-                                                        (1, 'Game can be paused by players')], validators=[InputRequired()])
+                                                        (1, 'Game can be paused by players')],
+                             validators=[InputRequired()])
     pvp = SelectField("PVP", choices=[(0, 'None'), (1, 'Party'), (2, 'Full')], validators=[InputRequired()])
-    server_vault = SelectField("Server Vault", choices=[(0, 'Local Characters Only'), (1, 'Server Characters Only')], validators=[InputRequired()])
-    enforce_legal_char = RadioField('Enforce Legal Characters', choices=[(1, 'Yes'), (0, 'No'), ], validators=[InputRequired()])
-    item_lv_restrictions = RadioField('Item Level Restrictions', choices=[(1, 'Yes'), (0, 'No')], validators=[InputRequired()])
+    server_vault = SelectField("Server Vault", choices=[(0, 'Local Characters Only'), (1, 'Server Characters Only')],
+                               validators=[InputRequired()])
+    enforce_legal_char = RadioField('Enforce Legal Characters', choices=[(1, 'Yes'), (0, 'No'), ],
+                                    validators=[InputRequired()])
+    item_lv_restrictions = RadioField('Item Level Restrictions', choices=[(1, 'Yes'), (0, 'No')],
+                                      validators=[InputRequired()])
     game_type = SelectField("Game Type", choices=[(0, 'Action'), (1, 'Story'), (2, 'Story Lite'), (3, 'Role Play'),
                                                   (4, 'Team'), (5, 'Melee'), (6, 'Arena'), (7, 'Social'),
                                                   (8, 'Alternative'), (9, 'PW Action'), (10, 'PW Story'), (11, 'Solo'),
                                                   (12, 'Tech Support')], validators=[InputRequired()])
-    one_party = SelectField("One Party", choices=[(0, 'Allow multiple parties'), (1, 'Only allow one party')], validators=[InputRequired()])
+    one_party = SelectField("One Party", choices=[(0, 'Allow multiple parties'), (1, 'Only allow one party')],
+                            validators=[InputRequired()])
     difficulty = SelectField("Difficulty", choices=[(1, 'Easy'), (2, 'Normal'), (3, 'D&D Hardcore'),
                                                     (4, 'Very Difficult')], validators=[InputRequired()])
     auto_save_interval = IntegerField("Auto Save Interval", validators=[InputRequired()])
     player_pwd = StringField("Player Password")
     dm_pwd = StringField("DM Password")
     admin_pwd = StringField("Admin Password")
-    module_name = SelectField("Select a Module", choices=[("DockerDemo", "DockerDemo"),], validators=[InputRequired()])
+    module_name = SelectField("Select a Module", choices=[("DockerDemo", "DockerDemo"), ], validators=[InputRequired()])
     port = IntegerField("Port (5121)", validators=[NumberRange(min=5120, max=5170), InputRequired()])
-    public_server = SelectField("Public Server", choices=[(0, 'Not Public'), (1, 'Public')], validators=[InputRequired()])
+    public_server = SelectField("Public Server", choices=[(0, 'Not Public'), (1, 'Public')],
+                                validators=[InputRequired()])
     reload_when_empty = RadioField('Reload When Empty', choices=[(1, 'Yes'), (0, 'No')], validators=[InputRequired()])
     volumes = SelectMultipleField()
     is_active = RadioField('Server Activate?', choices=[(1, 'Yes'), (0, 'No')], validators=[InputRequired()])
@@ -65,7 +73,6 @@ def index():
 
 @sc.route('/create', methods=('GET', 'POST'))
 def create():
-
     form = ServerConfiguration()
 
     volumes = db.session.query(VolumesInfo.id, VolumesInfo.name).all()
@@ -113,7 +120,7 @@ def update(id):
     if server_cfg is None:
         abort(404, "Post id {0} doesn't exist.".format(id))
 
-    form = ServerConfiguration(data=server_cfg.__dict__)
+    form = ServerConfiguration()
 
     # Load values for volume list
     volumes = db.session.query(VolumesInfo.id, VolumesInfo.name).all()
@@ -123,16 +130,38 @@ def update(id):
 
     form.volumes.choices = volume_list  # [pack_info]
 
-    # Set previously selected choices as default for volume list
+    # Set previously selected choices as default for volume list and volumes directories
     volume_list = []
     volumes = ServerVolumes.query.filter_by(server_configs_id=id).all()
     for volume in volumes:
         volume_list.append(volume.volumes_info_id)
     form.volumes.default = volume_list
-    form.process()
+
+    # Get the list of modules based on mounted volume directory
+    modules_dir = ((db.session.query(VolumesInfo.name, VolumesInfo.description,
+                                 VolumesDirs.dir_src_loc, VolumesDirs.dir_mount_loc
+                                 ).join(VolumesInfo, ServerVolumes.volumes_info_id == VolumesInfo.id
+                                        ).join(ServerVolumes, VolumesDirs.volumes_info_id == VolumesInfo.id)
+                ).filter(ServerVolumes.server_configs_id == id
+                         ).filter(VolumesDirs.dir_mount_loc == '/nwn/home/modules')).first()
+
+    # Check if there is a module directory
+    if modules_dir:
+        # TODO: Find a better way to do this since this approach uses a private object
+        dir = modules_dir._mapping['dir_src_loc']
+        server_modules = []
+        for file in os.listdir(dir):
+            # check only text files
+            if file.endswith('.mod'):
+                server_modules.append(tuple([file,file]))
+        form.module_name.choices = server_modules
+
+    form.module_name.default = server_cfg.module_name
+
+    # Process form, this needs to be done after all defaults are set and it needs to be passed the data.
+    form.process(data=server_cfg.__dict__)
     error = None
     if request.method == 'POST':
-
         # Delete old volumes
         ServerVolumes.query.filter(ServerVolumes.server_configs_id == id).delete()
         db.session.commit()
@@ -148,15 +177,17 @@ def update(id):
         # Get flat dict so it can be directly passed to the update
         server_cfg = request.form.to_dict(flat=True)
 
-        # Remove volumes from the dict since its not part of the db
-        del server_cfg["volumes"]
-
         if not server_cfg['server_name']:
             error = 'server name is required.'
 
         if error is not None:
             flash(error)
         else:
+            # Remove volumes from the dict since its not part of the db
+            # TODO: Fix how volumes are handled by the server_cfg so there is no need to manually delete
+            if 'volumes' in server_cfg:
+                del server_cfg["volumes"]
+
             ServerConfigs.query.filter_by(id=id).update(server_cfg)
             db.session.commit()
             return redirect(url_for('server_config.index'))

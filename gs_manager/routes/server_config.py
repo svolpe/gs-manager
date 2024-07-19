@@ -115,15 +115,21 @@ def update(id):
 
     form = ServerConfiguration(data=server_cfg.__dict__)
 
+    # Load values for volume list
     volumes = db.session.query(VolumesInfo.id, VolumesInfo.name).all()
-
     volume_list = []
     for volume in volumes:
         volume_list.append(tuple(volume))
 
-    #    test = [('cpp', 'C++'), ('py', 'Python'), ('text', 'Plain Text')]
     form.volumes.choices = volume_list  # [pack_info]
 
+    # Set previously selected choices as default for volume list
+    volume_list = []
+    volumes = ServerVolumes.query.filter_by(server_configs_id=id).all()
+    for volume in volumes:
+        volume_list.append(volume.volumes_info_id)
+    form.volumes.default = volume_list
+    form.process()
     error = None
     if request.method == 'POST':
 
@@ -134,12 +140,11 @@ def update(id):
         # Add New Volumes if there are any
         server_cfg_vols = request.form.to_dict(flat=False)
         if 'volumes' in server_cfg_vols:
-            volumes_info_id = server_cfg['volumes']
+            volumes_info_id = server_cfg_vols['volumes']
             for vol_info_id in volumes_info_id:
                 row = ServerVolumes(server_configs_id=id, volumes_info_id=vol_info_id)
                 db.session.add(row)
             db.session.commit()
-
         # Get flat dict so it can be directly passed to the update
         server_cfg = request.form.to_dict(flat=True)
 

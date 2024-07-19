@@ -35,7 +35,8 @@ def upload():
             os.remove(file_path)
 
         f.save(file_path)
-        return render_template("file_manager/upload_success.html", name=f.filename)
+        return redirect('/file_manager/')
+        # return render_template("file_manager/index.html")
 
 
 

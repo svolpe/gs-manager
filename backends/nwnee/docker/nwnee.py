@@ -2,7 +2,6 @@ from backends.nwnee.docker.nwn_docker import NwnServer
 import docker
 import time
 import db
-import sys
 
 
 if __name__ == "__main__":

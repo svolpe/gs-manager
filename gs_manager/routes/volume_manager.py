@@ -132,6 +132,8 @@ def edit(id):
                 row.active = 1
                 db.session.commit()
 
+        return redirect(url_for('volume_manager.index'))
+
     cwd = os.getcwd()
     shared_prefix = os.path.commonprefix([cwd, PATH_STORAGE])
     if shared_prefix != PATH_STORAGE:

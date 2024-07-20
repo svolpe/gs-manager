@@ -72,8 +72,8 @@ class ServerVolumes(db.Model):
 
 class ServerStatus(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    server_cfg_id = db.Column(db.String, nullable=False)
+    server_cfg_id = db.Column(db.String, nullable=False, index=True)
     status = db.Column(db.String, nullable=False)
-    Index("idx_server_status", "server_cfg_id",  unique=True)
+#    Index("idx_server_status", "server_cfg_id",  unique=True)
 
 

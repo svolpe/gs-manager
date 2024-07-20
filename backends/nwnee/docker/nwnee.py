@@ -2,6 +2,8 @@ from backends.nwnee.docker.nwn_docker import NwnServer
 import docker
 import time
 import db
+import sys
+
 
 if __name__ == "__main__":
     servers = dict()
@@ -38,7 +40,7 @@ if __name__ == "__main__":
                 servers[server_id].remove_container()
                 del servers[server_id]
                 db.set_cmd_executed(cmd_id)
-                i= 1+1
+
             if exec_cmd == 'start':
                 server_id = cmd['cmd_args']
                 db.set_status('starting', server_id)
@@ -66,7 +68,7 @@ if __name__ == "__main__":
             # Get Status and set it all to lower case just in case.
             status = server.container_status().lower()
             db.set_status(status, key)
-            i = 1+1
+
         # Get users!
         if (time.time() - get_users_timer_start) > 5:
             for key in servers:
@@ -76,7 +78,6 @@ if __name__ == "__main__":
                 if status == 'running':
                     active_users.update(server.get_active_users())
                     if len(active_users) > 0:
-                        i = 1 + 1
 
             get_users_timer_start = time.time()
 

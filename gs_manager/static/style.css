@@ -132,3 +132,28 @@ input[type=submit] {
   align-self: start;
   min-width: 10em;
 }
+
+.status_good {
+  display: block;
+  padding: 0.5rem;
+  color: green;
+}
+
+.status_loading, .status_stopping, .status_stopped {
+  display: block;
+  padding: 0.5rem;
+  color: orange;
+}
+
+.status_error {
+  display: block;
+  padding: 0.5rem;
+  color: red;
+}
+
+.status_not_active {
+  display: block;
+  padding: 0.5rem;
+  color: black;
+}
+

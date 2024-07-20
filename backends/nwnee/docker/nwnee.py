@@ -29,23 +29,44 @@ if __name__ == "__main__":
         # Get all commands that have not yet been run
         server_cmds = db.sql_data_to_list_of_dicts("SELECT * FROM server_cmds where cmd_executed_time is NULL")
         for cmd in server_cmds:
-
-            if cmd['cmd'] == 'recreate':
-                # stop existing container
-                servers[cmd['cmd_args']].stop()
-                servers[cmd['cmd_args']].remove_container()
-
-                cfg = db.sql_data_to_list_of_dicts(f"SELECT * FROM config where id = {cmd['cmd_args']}")
+            cmd_id = cmd['id']
+            exec_cmd = cmd['cmd']
+            if exec_cmd == 'stop':
+                server_id = cmd['cmd_args']
+                db.set_status('stopping', server_id)
+                servers[server_id].stop()
+                servers[server_id].remove_container()
+                del servers[server_id]
+                db.set_cmd_executed(cmd_id)
+                i= 1+1
+            if exec_cmd == 'start':
+                server_id = cmd['cmd_args']
+                db.set_status('starting', server_id)
+                cfg = db.sql_data_to_list_of_dicts(f"SELECT * FROM server_configs where id = {server_id}")[0]
                 # TODO: the current way of setting the docker name needs to be cleaned up!
-                docker_name = "nwn_" + str(cfg['id'])
-                servers[cmd['cmd_args']] = NwnServer(cfg, docker_name=docker_name)
-
-                servers[cmd['cmd_args']].start()
-                db.set_cmd_executed(cmd['id'])
+                docker_name = "nwn_" + str(server_id)
+                server = NwnServer(cfg, docker_name=docker_name)
+                server.create_container()
+                server.start()
+                servers[server_id] = server
+                db.set_cmd_executed(cmd_id)
 
         # TODO: insert update active user list
         active_users = dict()
 
+        # Send server statuses
+        # Remove all old statuses that are no longer used
+        keys = list(servers.keys())
+        qs = ", ".join("?" * len(keys))
+        query = f"delete from server_status where server_cfg_id not in ({qs})"
+        db.sql_update(query, keys)
+
+        for key in servers.keys():
+            server = servers[key]
+            # Get Status and set it all to lower case just in case.
+            status = server.container_status().lower()
+            db.set_status(status, key)
+            i = 1+1
         # Get users!
         if (time.time() - get_users_timer_start) > 5:
             for key in servers:

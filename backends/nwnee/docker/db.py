@@ -13,6 +13,14 @@ def set_cmd_executed(cmd_id):
     con.close()
 
 
+def sql_update(query, data):
+    con = sqlite3.connect(DBPATH)
+    cur = con.cursor()
+    cur.execute(query, data)
+    con.commit()
+    con.close()
+
+
 def sql_update_many(query, data):
     con = sqlite3.connect(DBPATH)
     cur = con.cursor()
@@ -67,3 +75,23 @@ def get_volumes(cfg_id):
         volumes_data[volume['dir_src_loc']] = {'bind': volume['dir_mount_loc'], 'mode': volume['read_write']}
 
     return volumes_data
+
+
+def set_status(status, cfg_id):
+    status = status.lower()
+
+    if status == "none":
+        print("No server status...")
+    elif status == "running":
+        save_status = "running"
+    elif status in "starting, restarting, loading":
+        save_status = "loading"
+    elif status == "stopping":
+        save_status = "stopping"
+    elif status in ["exited", "dead", "removing", "created"]:
+        save_status = "error"
+    else:
+        save_status = "error"
+
+    query = f"REPLACE INTO server_status(server_cfg_id, status) VALUES (?, ?)"
+    sql_update(query, [cfg_id, save_status])

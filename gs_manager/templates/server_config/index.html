@@ -17,11 +17,31 @@
           <div class="about">Server Name {{ post['module_name'] }} on port {{ post['port'] }}</div>
         </div>
           <a class="action" href="{{ url_for('server_config.update', id=post['id']) }}">Edit</a>
-        {% if server_status == "running" %}
-          <a class="action" href="{{ url_for('server_config.stop', id=post['id']) }}">stop</a>
-        {% else %}
-          <a class="action" href="{{ url_for('server_config.start', id=post['id']) }}">Start</a>
-        {% endif %}
+          {% if post['is_active'] == 0 %}
+            <a></a>
+            <a class="status_not_active"> Not Active </a>
+          {% elif post['status'] == "running" %}
+            <a class="status_good"> {{ post['status'] }} </a>
+          {% elif post['status'] == "loading" %}
+            <a class="status_loading"> {{ post['status'] }} </a>
+          {% elif post['status'] == "stopping" %}
+            <a class="status_stopping"> {{ post['status'] }} </a>
+          {% elif post['status'] == "stopped" %}
+            <a class="status_stopped"> {{ post['status'] }} </a>
+          {% elif post['status'] == "error" %}
+            <a class="status_error"> {{ post['status'] }} </a>
+          {% else %}
+            <a></a>
+          {% endif %}
+
+          {% if post['is_active'] == 0 %}
+            <a></a>
+          {% elif post['status'] == "running" %}
+            <a class="action" href="{{ url_for('server_config.stop', id=post['id']) }}">stop</a>
+          {% else %}
+            <a class="action" href="{{ url_for('server_config.start', id=post['id']) }}">Start</a>
+          {% endif %}
+
       </header>
     </article>
     {% if not loop.last %}

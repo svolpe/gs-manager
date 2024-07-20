@@ -6,7 +6,7 @@ from werkzeug.exceptions import abort
 from ..routes.auth import login_required
 from sqlalchemy import (delete, insert)
 from ..extensions import db
-from ..models.server_nwn import ServerConfigs, ServerCmds, VolumesInfo, ServerVolumes, VolumesDirs
+from ..models.server_nwn import ServerConfigs, ServerCmds, VolumesInfo, ServerVolumes, VolumesDirs, ServerStatus
 
 from flask_wtf import FlaskForm
 from flask_wtf import FlaskForm
@@ -66,10 +66,12 @@ class ServerConfigDynamic(FlaskForm):
 @sc.route('/')
 def index():
     query = db.session.query(
-        ServerConfigs.server_name, ServerConfigs.port, ServerConfigs.id, ServerConfigs.module_name)
+        ServerConfigs.server_name, ServerConfigs.port, ServerConfigs.id, ServerConfigs.module_name, ServerStatus.status,
+        ServerConfigs.is_active
+    ).join(ServerStatus, ServerStatus.server_cfg_id == ServerConfigs.id, isouter=True)
 
     return render_template(
-        'server_config/index.html', posts=query, server_status='running')
+        'server_config/index.html', posts=query)
 
 
 @sc.route('/create', methods=('GET', 'POST'))
@@ -198,17 +200,29 @@ def update(id):
     return render_template('server_config/wtf_create.html', form=form)
 
 
+def send_cmd(cmd, user_id, cmd_args):
+
+    # Check if the same command is already queued
+    cmd_exist = (ServerCmds.query.filter_by(cmd=cmd).
+                 filter_by(cmd_args=cmd_args).
+                 filter_by(cmd_executed_time=None).first())
+
+    # If command is not already queued then send it, otherwise don't!
+    if not cmd_exist:
+        cmd = ServerCmds(cmd=cmd, user_id=user_id, cmd_args=cmd_args)
+        db.session.add(cmd)
+        db.session.commit()
+    return redirect(url_for('server_config.index'))
+
+
 @sc.route('/<int:id>/stop', methods=['GET', 'POST'])
 def stop(id):
-    cmd = ServerCmds(cmd='stop', user_id=g.user.id, cmd_args=str(id))
-    db.session.add(cmd)
-    db.session.commit()
+    send_cmd('stop', g.user.id, str(id))
     return redirect(url_for('server_config.index'))
 
 
 @sc.route('/<int:id>/start', methods=['GET', 'POST'])
 def start(id):
     cmd = ServerCmds(cmd='start', user_id=g.user.id, cmd_args=str(id))
-    db.session.add(cmd)
-    db.session.commit()
+    send_cmd('start', g.user.id, str(id))
     return redirect(url_for('server_config.index'))

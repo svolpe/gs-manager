@@ -4,7 +4,8 @@ from flask import Flask
 from .extensions import db, migrate
 from .models.users import User
 from .models.blog import Post
-from .models.server_nwn import ServerConfigs, ServerCmds, PcActiveLog, VolumesInfo, VolumesDirs, ServerVolumes
+from .models.server_nwn import (ServerConfigs, ServerCmds, PcActiveLog, VolumesInfo, VolumesDirs, ServerVolumes,
+                                ServerStatus)
 
 
 from flask_sqlalchemy import SQLAlchemy

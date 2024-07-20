@@ -1,5 +1,5 @@
 from ..extensions import db
-from sqlalchemy import func, Index
+from sqlalchemy import func
 
 
 class PcActiveLog(db.Model):
@@ -72,8 +72,7 @@ class ServerVolumes(db.Model):
 
 class ServerStatus(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    server_cfg_id = db.Column(db.String, nullable=False, index=True)
+    server_cfg_id = db.Column(db.String, nullable=False, unique=True, index=True)
     status = db.Column(db.String, nullable=False)
-#    Index("idx_server_status", "server_cfg_id",  unique=True)
 
 

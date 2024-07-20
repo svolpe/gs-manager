@@ -63,15 +63,19 @@ class NwnServer:
         """
         This method gets and returns the active users
         """
+
+
         raw_user_list = self._get_server_cmd('status\n', start_flt='Server Name:')
 
-        if len(raw_user_list):
-            active_users = self._parse_active_users(raw_user_list)
-        else:
-            active_users = {}
+        try:
+            if len(raw_user_list):
+                active_users = self._parse_active_users(raw_user_list)
+            else:
+                active_users = {}
 
-        return active_users
-
+            return active_users
+        except:
+            i = 1+1
     def _parse_active_users(self, raw_data):
         """
         This method takes a large bitarray string, finds the user table and parses out all the user information into
@@ -139,7 +143,7 @@ class NwnServer:
                     retry_cnt -= 1
                     start_time = time.time()
                     break
-        return 0
+        return []
 
     def start(self):
         self.client.start(self.container)

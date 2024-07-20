@@ -76,10 +76,8 @@ if __name__ == "__main__":
                 status = server.container_status()
                 if status == 'running':
                     active_users.update(server.get_active_users())
-                    if len(active_users) > 0:
 
             get_users_timer_start = time.time()
-
             last_active_users = db.sql_data_return_dict_of_dict("cd_key",
                                                                 "SELECT * FROM pc_active_log "
                                                                 "where logoff_time is NULL")

@@ -5,7 +5,7 @@ from flask import (
 import os
 import subprocess
 import shutil
-from ..extensions import PATH_STORAGE
+from ..extensions import db, change_dir_safe, PATH_STORAGE
 
 fm = Blueprint('file_manager', __name__)
 
@@ -41,13 +41,11 @@ def upload():
 
 
 # handle root route
-@fm.route('/file_manager/')
-def root():
+@fm.route('/file_manager')
+def index():
     cwd = os.getcwd()
-    shared_prefix = os.path.commonprefix([cwd, PATH_STORAGE])
-    if shared_prefix != PATH_STORAGE:
-        cwd = PATH_STORAGE
-        os.chdir(cwd)
+    new_path = request.args.get('path', cwd)
+    cwd = change_dir_safe(new_path)
     file_list2 = os.listdir(cwd)
     file_list = subprocess.check_output('ls', shell=True).decode('utf-8').split('\n')  # use 'dir' command on Windows
     return render_template('file_manager/index.html', file_list=file_list2,
@@ -58,16 +56,16 @@ def root():
 @fm.route('/file_manager/cd')
 def cd():
     # run 'level up' command
-    path = request.args.get('path')
-    abs_path = os.path.abspath(path)
-    shared_prefix = os.path.commonprefix([abs_path, PATH_STORAGE])
-    # Make sure there is not a request to leave game storage directory
-    if shared_prefix == PATH_STORAGE:
-        os.chdir(path)
+    cur_dir = os.getcwd()
+    new_path = request.args.get('path', cur_dir)
+    go_parent = request.args.get('go_par', 'no')
+    
+    id = request.args.get('id')
+    if go_parent == 'yes':
+        new_path = os.path.abspath(os.path.join(new_path, os.pardir))
 
     # redirect to file manager
-    return redirect('/file_manager/')
-
+    return redirect(url_for('file_manager.index', id=id, path=new_path))
 
 # handle 'make directory' command
 @fm.route('/file_manager/md')

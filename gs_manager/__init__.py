@@ -16,12 +16,12 @@ def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True)
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///../instance/gsmanager.sqlite'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    # This key is required to enable a session
 
 #    SQLALCHEMY_BINDS = {
 #        "server": "sqlite:///../instance/gsmanager_server.sqlite",
 #        },
 #    }
+    # This key is required to enable a session
     app.config.from_mapping(
         SECRET_KEY = 'dev',
     )

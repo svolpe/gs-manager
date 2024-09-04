@@ -48,12 +48,12 @@
             </div>
             <ul>
               <form action="/volumes/md">
-                <input type="submit" value="New folder"/>
-                <input type="hidden" name="id" value="{{ id }}"/>
-                <input name="folder" type="text" value="new_folder"/>
+		<input type="submit" value="New folder"/>
+		<input type="hidden" name="id" value="{{ id }}"/>
+		<input name="folder" type="text" value="new_folder"/>
               </form>
 
-              <li><a href="/volumes/cd?path=..&id={{id}}">..</a></li>
+	      <li><a href="/volumes/cd?path={{ cwd }}&go_par=yes&id={{id}}">..</a></li>
               {% for item in file_list %}
                 {% if '.' != item[0] %}
                   <li><strong><a href="/volumes/cd?path={{cwd + '/' + item}}&id={{id}}">{{item}}</a></strong><a href="/volumes/add?dir={{cwd + '/' + item}}&id={{id}}"> (Add)</a></li>

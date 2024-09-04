@@ -2,17 +2,17 @@ from flask import (
     Blueprint, redirect, render_template, request, url_for, g
 )
 
-from ..extensions import db
+from ..extensions import db, change_dir_safe, PATH_STORAGE
 from ..models.server_nwn import VolumesDirs, VolumesInfo
 
 import os
 import shutil
+from copy import copy
 
 from wtforms import (StringField, FieldList, DecimalField, SelectField, RadioField, IntegerField, BooleanField,
                      FormField, Form, HiddenField, )
 
 from wtforms.validators import InputRequired
-from ..extensions import PATH_STORAGE
 
 vm = Blueprint('volume_manager', __name__)
 
@@ -135,11 +135,10 @@ def edit(id):
         return redirect(url_for('volume_manager.index'))
 
     cwd = os.getcwd()
-    shared_prefix = os.path.commonprefix([cwd, PATH_STORAGE])
-    if shared_prefix != PATH_STORAGE:
-        cwd = PATH_STORAGE
-        os.chdir(cwd)
-    file_list = os.listdir(cwd)
+    new_path = request.args.get('path', cwd)
+    new_path = change_dir_safe(new_path)
+
+    file_list = os.listdir(new_path)
 
     volumes = ((db.session.query(VolumesInfo.name, VolumesInfo.description,
                                  VolumesDirs.dir_src_loc, VolumesDirs.dir_mount_loc, VolumesDirs.id,
@@ -164,7 +163,7 @@ def edit(id):
     group_name = volumes[0].name
 
     return render_template(f'volume_manager/edit.html', volumes=volumes, name=group_name,
-                           file_list=file_list, form=form, cwd=cwd, id=id, submit_en=submit_en)
+                           file_list=file_list, form=form, cwd=new_path, id=id, submit_en=submit_en)
 
 
 @vm.route('/volumes/<int:id>/update')
@@ -199,16 +198,16 @@ def uploadb():
 @vm.route('/volumes/cd')
 def cd():
     # run 'level up' command
-    path = request.args.get('path')
+    cur_dir = os.getcwd()
+    new_path = request.args.get('path', cur_dir)
+    go_parent = request.args.get('go_par', 'no')
+    
     id = request.args.get('id')
-    abs_path = os.path.abspath(path)
-    shared_prefix = os.path.commonprefix([abs_path, PATH_STORAGE])
-    # Make sure there is not a request to leave game storage directory
-    if shared_prefix == PATH_STORAGE:
-        os.chdir(path)
+    if go_parent == 'yes':
+        new_path = os.path.abspath(os.path.join(new_path, os.pardir))
 
     # redirect to file manager
-    return redirect(url_for('volume_manager.edit', id=id))
+    return redirect(url_for('volume_manager.edit', id=id, path=new_path))
 
 
 # handle 'make directory' command

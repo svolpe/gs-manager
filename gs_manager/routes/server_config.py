@@ -6,18 +6,19 @@ from werkzeug.exceptions import abort
 from ..routes.auth import login_required
 from sqlalchemy import (delete, insert)
 from ..extensions import db
-from ..models.server_nwn import ServerConfigs, ServerCmds, VolumesInfo, ServerVolumes, VolumesDirs, ServerStatus
+from ..models.server_nwn import (ServerConfigs, ServerCmds, VolumesInfo, ServerVolumes, VolumesDirs,
+                                 ServerStatus, SystemWatchdog)
 
 from flask_wtf import FlaskForm
 from flask_wtf import FlaskForm
 from wtforms import StringField, FieldList, SelectField, RadioField, IntegerField, SelectMultipleField, FormField
 from wtforms.validators import InputRequired, NumberRange
 
-import os
+import os, datetime
 
 sc = Blueprint('server_config', __name__)
 
-"""The best way to move forward (for now) is to have a route that will start all active backends and one to 
+"""The best way to movee forward (for now) is to have a route that will start all active backends and one to 
     list all active members. There should also be a background job tht 
 """
 
@@ -70,8 +71,17 @@ def index():
         ServerConfigs.is_active
     ).join(ServerStatus, ServerStatus.server_cfg_id == ServerConfigs.id, isouter=True)
 
+    heartbeat = SystemWatchdog.query.filter_by(component="backend_nwn").first()
+    cur_datetime = datetime.datetime.now()
+
+    if not heartbeat:
+        server_status="down"
+    elif (cur_datetime - heartbeat.heart_beat).seconds > 10:
+        server_status="down"
+    else:
+        server_status = "up"
     return render_template(
-        'server_config/index.html', posts=query)
+        'server_config/index.html', posts=query, server_status=server_status)
 
 
 @sc.route('/create', methods=('GET', 'POST'))

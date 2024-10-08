@@ -64,7 +64,6 @@ class NwnServer:
         This method gets and returns the active users
         """
 
-
         raw_user_list = self._get_server_cmd('status\n', start_flt='Server Name:')
 
         try:
@@ -76,6 +75,7 @@ class NwnServer:
             return active_users
         except:
             i = 1+1
+
     def _parse_active_users(self, raw_data):
         """
         This method takes a large bitarray string, finds the user table and parses out all the user information into

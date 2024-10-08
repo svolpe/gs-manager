@@ -1,7 +1,16 @@
+import datetime
 import sqlite3
-import os
 
 DBPATH = 'instance/gsmanager.sqlite'
+
+
+def update_heartbeat(component):
+    con = sqlite3.connect(DBPATH)
+    cur = con.cursor()
+    query = f"insert or replace into system_watchdog(heart_beat, component) VALUES(?, ?)"
+    cur.execute(query, [datetime.datetime.now(), component])
+    con.commit()
+    con.close()
 
 
 def set_cmd_executed(cmd_id):

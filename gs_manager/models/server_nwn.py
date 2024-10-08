@@ -76,3 +76,7 @@ class ServerStatus(db.Model):
     status = db.Column(db.String, nullable=False)
 
 
+class SystemWatchdog(db.Model):
+    component = db.Column(db.String, nullable=False, unique=True, primary_key=True)
+    heart_beat = db.Column(db.TIMESTAMP(timezone=True))
+

@@ -27,6 +27,7 @@ if __name__ == "__main__":
 
     get_users_timer_start = time.time()
     while True:
+        db.update_heartbeat('backend_nwn')
         # Get all commands that have not yet been run
         server_cmds = db.sql_data_to_list_of_dicts("SELECT * FROM server_cmds where cmd_executed_time is NULL")
         for cmd in server_cmds:

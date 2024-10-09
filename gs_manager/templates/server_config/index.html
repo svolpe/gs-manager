@@ -34,7 +34,7 @@
           {% elif post['status'] == "error" %}
             <a class="status_error"> {{ post['status'] }} </a>
           {% else %}
-            <a></a>
+            <a class="status_stopped"> Manually Stopped </a>
           {% endif %}
 
           {% if post['is_active'] == 0 %}

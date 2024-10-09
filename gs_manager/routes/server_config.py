@@ -5,7 +5,7 @@ from werkzeug.exceptions import abort
 
 from ..routes.auth import login_required
 from sqlalchemy import (delete, insert)
-from ..extensions import db
+from ..extensions import db, clone_model
 from ..models.server_nwn import (ServerConfigs, ServerCmds, VolumesInfo, ServerVolumes, VolumesDirs,
                                  ServerStatus, SystemWatchdog)
 
@@ -222,6 +222,23 @@ def send_cmd(cmd, user_id, cmd_args):
         cmd = ServerCmds(cmd=cmd, user_id=user_id, cmd_args=cmd_args)
         db.session.add(cmd)
         db.session.commit()
+    return redirect(url_for('server_config.index'))
+
+
+@sc.route('/<int:id>/delete', methods=['GET', 'POST'])
+def delete(id):
+    """This route deletes a server config from the db"""
+    ServerConfigs.query.filter_by(id=id).delete()
+    db.session.commit()
+    return redirect(url_for('server_config.index'))
+
+
+@sc.route('/<int:id>/copy', methods=['GET', 'POST'])
+def copy(id):
+    """This route copies an existing server config and adds _copy to the end of the name"""
+    row_cp = ServerConfigs.query.filter_by(id=id)
+    row_cp_obj = row_cp.all()[0]
+    clone_model(row_cp_obj, server_name=row_cp_obj.server_name + "_copy")
     return redirect(url_for('server_config.index'))
 
 

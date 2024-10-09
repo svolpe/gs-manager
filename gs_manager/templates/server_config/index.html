@@ -15,8 +15,9 @@
         <div>
           <h1>{{ post['server_name'] }}</h1>
           <div class="about">Server Name {{ post['module_name'] }} on port {{ post['port'] }}</div>
+
         </div>
-          <a class="action" href="{{ url_for('server_config.update', id=post['id']) }}">Edit</a>
+          <a class="action" href="{{ url_for('server_config.delete', id=post['id']) }}">Delete</a>
           {% if server_status == "down" %}
             <a class="status_error"> Backend Down </a>
           {% elif post['is_active'] == 0 %}
@@ -43,7 +44,8 @@
           {% else %}
             <a class="action" href="{{ url_for('server_config.start', id=post['id']) }}">Start</a>
           {% endif %}
-
+          <a class="action" href="{{ url_for('server_config.copy', id=post['id']) }}">Copy</a>
+          <a class="action" href="{{ url_for('server_config.update', id=post['id']) }}">Edit</a>
       </header>
     </article>
     {% if not loop.last %}

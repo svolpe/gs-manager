@@ -228,17 +228,31 @@ def send_cmd(cmd, user_id, cmd_args):
 @sc.route('/<int:id>/delete', methods=['GET', 'POST'])
 def delete(id):
     """This route deletes a server config from the db"""
+
+    # Delete the server config
     ServerConfigs.query.filter_by(id=id).delete()
+
+    # Delete all volumes associated with it
+    ServerVolumes.query.filter_by(server_configs_id=id).delete()
     db.session.commit()
+
     return redirect(url_for('server_config.index'))
 
 
 @sc.route('/<int:id>/copy', methods=['GET', 'POST'])
 def copy(id):
     """This route copies an existing server config and adds _copy to the end of the name"""
-    row_cp = ServerConfigs.query.filter_by(id=id)
-    row_cp_obj = row_cp.all()[0]
-    clone_model(row_cp_obj, server_name=row_cp_obj.server_name + "_copy", is_active=0)
+
+    # Clone server config
+    config_cp = ServerConfigs.query.filter_by(id=id)
+    config_cp_obj = config_cp.all()[0]
+    row_new = clone_model(config_cp_obj, server_name=config_cp_obj.server_name + "_copy", is_active=0)
+
+    # Clone server volumes
+    vol_cp = ServerVolumes.query.filter_by(server_configs_id=id).all()
+    for vol in vol_cp:
+        clone_model(vol, server_configs_id=row_new.id)
+
     return redirect(url_for('server_config.index'))
 
 

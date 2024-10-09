@@ -238,7 +238,7 @@ def copy(id):
     """This route copies an existing server config and adds _copy to the end of the name"""
     row_cp = ServerConfigs.query.filter_by(id=id)
     row_cp_obj = row_cp.all()[0]
-    clone_model(row_cp_obj, server_name=row_cp_obj.server_name + "_copy")
+    clone_model(row_cp_obj, server_name=row_cp_obj.server_name + "_copy", is_active=0)
     return redirect(url_for('server_config.index'))
 
 

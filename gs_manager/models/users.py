@@ -13,7 +13,7 @@ class User(UserMixin, db.Model):
 
     The following attributes of a user are stored in this table:
         * user name - User ID/Name for user
-        * hashed password - hashed password (using werkzeug.security)
+        * password - hashed password (using werkzeug.security)
         * registered_on - date & time that the user registered
 
     REMEMBER: Never store the plaintext password in a database!
@@ -21,7 +21,7 @@ class User(UserMixin, db.Model):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_name = db.Column(db.String(80), unique=True, nullable=False)
-    password_hashed = db.Column(db.String(80), nullable=False)
+    password = db.Column(db.String(80), nullable=False)
     registered_on = mapped_column(DateTime(), nullable=False)
     
     def __init__(self, user_name: str, password_plaintext: str):
@@ -29,14 +29,14 @@ class User(UserMixin, db.Model):
         plaintext password using Werkzeug.Security.
         """
         self.user_name = user_name
-        self.password_hashed = self._generate_password_hash(password_plaintext)
+        self.password = self._generate_password_hash(password_plaintext)
         self.registered_on = datetime.now()
 
     def is_password_correct(self, password_plaintext: str):
-        return check_password_hash(self.password_hashed, password_plaintext)
+        return check_password_hash(self.password, password_plaintext)
 
     def set_password(self, password_plaintext: str):
-        self.password_hashed = self._generate_password_hash(password_plaintext)
+        self.password = self._generate_password_hash(password_plaintext)
 
     @staticmethod
     def _generate_password_hash(password_plaintext):

@@ -7,7 +7,7 @@ from ..routes.auth import login_required
 from sqlalchemy import (delete, insert)
 from ..extensions import db, clone_model
 from ..models.server_nwn import (ServerConfigs, ServerCmds, VolumesInfo, ServerVolumes, VolumesDirs,
-                                 ServerStatus, SystemWatchdog)
+                                ServerStatus, SystemWatchdog)
 
 from flask_wtf import FlaskForm
 from flask_wtf import FlaskForm
@@ -30,18 +30,18 @@ class ServerConfiguration(FlaskForm):
     max_level = IntegerField("Max Level", validators=[NumberRange(min=1, max=40), InputRequired()])
     pause_play = SelectField("Pause And Play", choices=[(0, 'Game only can be paused by DM'),
                                                         (1, 'Game can be paused by players')],
-                             validators=[InputRequired()])
+                            validators=[InputRequired()])
     pvp = SelectField("PVP", choices=[(0, 'None'), (1, 'Party'), (2, 'Full')], validators=[InputRequired()])
     server_vault = SelectField("Server Vault", choices=[(0, 'Local Characters Only'), (1, 'Server Characters Only')],
-                               validators=[InputRequired()])
+                            validators=[InputRequired()])
     enforce_legal_char = RadioField('Enforce Legal Characters', choices=[(1, 'Yes'), (0, 'No'), ],
                                     validators=[InputRequired()])
     item_lv_restrictions = RadioField('Item Level Restrictions', choices=[(1, 'Yes'), (0, 'No')],
-                                      validators=[InputRequired()])
+                                    validators=[InputRequired()])
     game_type = SelectField("Game Type", choices=[(0, 'Action'), (1, 'Story'), (2, 'Story Lite'), (3, 'Role Play'),
-                                                  (4, 'Team'), (5, 'Melee'), (6, 'Arena'), (7, 'Social'),
-                                                  (8, 'Alternative'), (9, 'PW Action'), (10, 'PW Story'), (11, 'Solo'),
-                                                  (12, 'Tech Support')], validators=[InputRequired()])
+                                                (4, 'Team'), (5, 'Melee'), (6, 'Arena'), (7, 'Social'),
+                                                (8, 'Alternative'), (9, 'PW Action'), (10, 'PW Story'), (11, 'Solo'),
+                                                (12, 'Tech Support')], validators=[InputRequired()])
     one_party = SelectField("One Party", choices=[(0, 'Allow multiple parties'), (1, 'Only allow one party')],
                             validators=[InputRequired()])
     difficulty = SelectField("Difficulty", choices=[(1, 'Easy'), (2, 'Normal'), (3, 'D&D Hardcore'),
@@ -153,11 +153,11 @@ def update(id):
 
     # Get the list of modules based on mounted volume directory
     modules_dir = ((db.session.query(VolumesInfo.name, VolumesInfo.description,
-                                 VolumesDirs.dir_src_loc, VolumesDirs.dir_mount_loc
-                                 ).join(VolumesInfo, ServerVolumes.volumes_info_id == VolumesInfo.id
+                                VolumesDirs.dir_src_loc, VolumesDirs.dir_mount_loc
+                                ).join(VolumesInfo, ServerVolumes.volumes_info_id == VolumesInfo.id
                                         ).join(ServerVolumes, VolumesDirs.volumes_info_id == VolumesInfo.id)
                 ).filter(ServerVolumes.server_configs_id == id
-                         ).filter(VolumesDirs.dir_mount_loc == '/nwn/home/modules')).first()
+                        ).filter(VolumesDirs.dir_mount_loc == '/nwn/home/modules')).first()
 
     # Check if there is a module directory
     if modules_dir:
@@ -214,8 +214,8 @@ def send_cmd(cmd, user_id, cmd_args):
 
     # Check if the same command is already queued
     cmd_exist = (ServerCmds.query.filter_by(cmd=cmd).
-                 filter_by(cmd_args=cmd_args).
-                 filter_by(cmd_executed_time=None).first())
+                filter_by(cmd_args=cmd_args).
+                filter_by(cmd_executed_time=None).first())
 
     # If command is not already queued then send it, otherwise don't!
     if not cmd_exist:

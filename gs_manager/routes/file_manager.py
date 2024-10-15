@@ -35,7 +35,7 @@ def upload():
             os.remove(file_path)
 
         f.save(file_path)
-        return redirect('/file_manager/')
+        return redirect('/file_manager')
         # return render_template("file_manager/index.html")
 
 
@@ -74,7 +74,7 @@ def md():
     os.mkdir(request.args.get('folder'))
 
     # redirect to fole manager
-    return redirect('/file_manager/')
+    return redirect('/file_manager')
 
 
 # handle 'make directory' command
@@ -88,9 +88,15 @@ def rm():
         return 'bad request!', 400
     else:
         # remove certain directory
-        shutil.rmtree(cwd + '/' + request.args.get('dir'))
+        rm_loc = cwd + '/' + request.args.get('dir')
+        if os.path.isfile(rm_loc):
+            os.remove(rm_loc)
+        elif os.path.isdir(rm_loc):
+            shutil.rmtree(cwd + '/' + request.args.get('dir'))
+        else:
+            return 'bad request!', 400
         # redirect to file manager
-        return redirect('/file_manager/')
+    return redirect('/file_manager')
 
 
 # view text files

@@ -73,30 +73,32 @@ def md():
     # create new folder
     os.mkdir(request.args.get('folder'))
 
-    # redirect to fole manager
+    # redirect to file manager
     return redirect('/file_manager')
 
 
 # handle 'make directory' command
 @fm.route('/file_manager/rm')
 def rm():
-    cwd = os.getcwd()
-    shared_prefix = os.path.commonprefix([cwd, PATH_STORAGE])
+    rm_loc = request.args.get('path')
+    cur_loc = []
+    shared_prefix = os.path.commonprefix([rm_loc, PATH_STORAGE])
 
     # The following command protects against deleting files outside of the storage.
     if shared_prefix != PATH_STORAGE:
         return 'bad request!', 400
     else:
+        cur_loc = os.path.dirname(rm_loc)
         # remove certain directory
-        rm_loc = cwd + '/' + request.args.get('dir')
         if os.path.isfile(rm_loc):
             os.remove(rm_loc)
         elif os.path.isdir(rm_loc):
-            shutil.rmtree(cwd + '/' + request.args.get('dir'))
+            shutil.rmtree(rm_loc)
         else:
             return 'bad request!', 400
         # redirect to file manager
-    return redirect('/file_manager')
+    return redirect(url_for('file_manager.index', id=id, path=cur_loc))
+
 
 
 # view text files

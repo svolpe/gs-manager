@@ -26,15 +26,24 @@ def prefix_removal(text, prefixes):
 @fm.route('/file_manager/upload', methods=['GET', 'POST'])
 def upload():
     if request.method == 'POST':
-        f = request.files['file']
-        cwd = os.getcwd()
-        file_path = os.path.join(cwd, f.filename)
+        
+        fname = request.files['file']
+
+        cwd = request.form.get('cwd', os.getcwd())
+        
+        shared_prefix = os.path.commonprefix([cwd, PATH_STORAGE])
+
+        # The following command protects against deleting files outside of the storage.
+        if shared_prefix != PATH_STORAGE:
+            cwd = PATH_STORAGE
+
+        file_path = os.path.join(cwd, fname.filename)
 
         # If the file already exists then delete it first
         if os.path.exists(file_path):
             os.remove(file_path)
 
-        f.save(file_path)
+        fname.save(file_path)
         return redirect('/file_manager')
         # return render_template("file_manager/index.html")
 

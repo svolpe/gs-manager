@@ -29,7 +29,7 @@
 	      <li><a href="/file_manager/cd?path={{ cwd }}&go_par=yes">..</a></li>
               {% for item in file_list %}
                 {% if '.' != item[0] %}
-                  <li><strong><a href="/file_manager/cd?path={{cwd + '/' + item}}">{{item}}</a></strong><a href="/file_manager/rm?dir={{item}}"> (Delete)</a></li>
+                  <li><strong><a href="/file_manager/cd?path={{cwd + '/' + item}}">{{item}}</a></strong></li>
                 {% elif '.txt' in item or '.py' in item or '.json' in item %}
                   <li><strong><a href="/file_manager/view?file={{cwd + '/' + item}}">{{item}}</a></strong></li>
                 {% else %}

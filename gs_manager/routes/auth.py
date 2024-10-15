@@ -3,7 +3,6 @@ import functools
 from flask import (
     Blueprint, flash, g, redirect, render_template, request, session, url_for
 )
-from werkzeug.security import check_password_hash, generate_password_hash
 from ..extensions import db
 from ..models.users import User
 
@@ -29,7 +28,7 @@ def register():
         elif db.session.query(User.id).filter_by(user_name=username).first() is not None:
             error = 'User {} is already registered.'.format(username)
         if error is None:
-            user = User(user_name=username, password=generate_password_hash(password))
+            user = User(username, password)
             db.session.add(user)
             db.session.commit()
             return redirect(url_for('auth.login'))
@@ -49,7 +48,8 @@ def login():
         then the browser then sends it back with subsequent requests
         Flask securely signs the data so that it can't be tampered with
     """
-
+    # TODO: Implement this  https://gitlab.com/patkennedy79/flask_user_management_example/-/blob/main/project/users/routes.py?ref_type=heads
+    
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
@@ -59,7 +59,7 @@ def login():
 
         if user is None:
             error = 'Incorrect username.'
-        elif not check_password_hash(user.password, password):
+        elif not user.is_password_correct(password):
             error = 'Incorrect password.'
 
         if error is None:

@@ -73,7 +73,7 @@ def md():
     # create new folder
     os.mkdir(request.args.get('folder'))
 
-    # redirect to fole manager
+    # redirect to file manager
     return redirect('/file_manager')
 
 

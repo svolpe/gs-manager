@@ -157,3 +157,6 @@ input[type=submit] {
   color: black;
 }
 
+.file_table td{
+  min-width: 20px;
+}

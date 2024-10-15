@@ -49,7 +49,7 @@ def index():
     file_list2 = os.listdir(cwd)
     file_list = subprocess.check_output('ls', shell=True).decode('utf-8').split('\n')  # use 'dir' command on Windows
     return render_template('file_manager/index.html', file_list=file_list2,
-                           cwd=cwd, )
+                            cwd=cwd, )
 
 
 # handle 'cd' command

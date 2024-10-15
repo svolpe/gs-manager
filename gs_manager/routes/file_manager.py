@@ -44,7 +44,7 @@ def upload():
             os.remove(file_path)
 
         fname.save(file_path)
-        return redirect('/file_manager')
+        return redirect(url_for('file_manager.index', path=cwd))
         # return render_template("file_manager/index.html")
 
 

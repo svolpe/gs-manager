@@ -3,9 +3,6 @@ from flask_migrate import Migrate
 import os
 
 
-# TODO: Move this into some sort of config file or database
-PATH_STORAGE = '/home/shane/dev/gs-manager/instance/docker_storage'
-
 db = SQLAlchemy()
 migrate = Migrate()
 
@@ -26,11 +23,11 @@ def clone_model(model, **kwargs):
     return clone
 
 
-def change_dir_safe(new_dir):
+def change_dir_safe(new_dir, path_storage):
     # TODO: The following change directory code is very ugly, look at refactoring...
-    shared_prefix = os.path.commonprefix([new_dir, PATH_STORAGE])
-    if shared_prefix != PATH_STORAGE:
-        new_dir = PATH_STORAGE
+    shared_prefix = os.path.commonprefix([new_dir, path_storage])
+    if shared_prefix != path_storage:
+        new_dir = path_storage
     
     os.chdir(new_dir)
     return new_dir

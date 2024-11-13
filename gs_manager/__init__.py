@@ -7,35 +7,21 @@ from .models.blog import Post
 from .models.server_nwn import (ServerConfigs, ServerCmds, PcActiveLog, VolumesInfo, VolumesDirs, ServerVolumes,
                                 ServerStatus)
 
-
 from flask_sqlalchemy import SQLAlchemy
 
 
 def create_app(test_config=None):
     # create and configure the app
     app = Flask(__name__, instance_relative_config=True)
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///../instance/gsmanager.sqlite'
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-#    SQLALCHEMY_BINDS = {
-#        "server": "sqlite:///../instance/gsmanager_server.sqlite",
-#        },
-#    }
-    # This key is required to enable a session
-    app.config.from_mapping(
-        SECRET_KEY = 'dev',
-    )
+    # load the instance config, if it exists, when not testing
+    # TODO: Look into if this is the correct way to load a config file
+    app.config.from_object("gs_manager.config.DevelopmentConfig")
+
     db.init_app(app)
     migrate.init_app(app, db)
     with app.app_context():
         db.create_all()
-    app.config['SQLALCHEMY_ECHO'] = True
-    if test_config is None:
-        # load the instance config, if it exists, when not testing
-        app.config.from_pyfile('config.py', silent=True)
-    else:
-        # load the test config if passed in
-        app.config.from_mapping(test_config)
 
     # ensure the instance folder exists
     try:
@@ -55,10 +41,14 @@ def create_app(test_config=None):
     from .routes import players
     app.register_blueprint(players.pc)
 
-    from .routes import file_manager
+    # Ported to using a class
+    from .routes.file_manager import FileManagerBp
+    file_manager = FileManagerBp(path_storage= app.config['GS_PATH_STORAGE'])
     app.register_blueprint(file_manager.fm)
 
-    from .routes import volume_manager
+    # Ported to using a class
+    from .routes.volume_manager import VolumeManagerBp
+    volume_manager = VolumeManagerBp(path_storage= app.config['GS_PATH_STORAGE'])
     app.register_blueprint(volume_manager.vm)
 
     '''

@@ -21,10 +21,10 @@
 
                     {% for volume in form.volume_list %}
                         <tr>
-                             <td>{{volume.vol_id}} {{ volume.dir_mount_loc }}</td>
-                             <td>{{ volume.dir_mount_loc.label }}</td>
-                             <td>{{ volume.delete }}</td>
-                             <td>{{ volume.read_write }}</td>
+                            <td>{{volume.vol_id}} {{ volume.dir_mount_loc }}</td>
+                            <td>{{ volume.dir_mount_loc.label }}</td>
+                            <td>{{ volume.delete }}</td>
+                            <td>{{ volume.read_write }}</td>
                         </tr>
                     {% endfor %}
                     {% if submit_en %}
@@ -51,18 +51,31 @@
 		<input type="submit" value="New folder"/>
 		<input type="hidden" name="id" value="{{ id }}"/>
 		<input name="folder" type="text" value="new_folder"/>
-              </form>
-
-	      <li><a href="/volumes/cd?path={{ cwd }}&go_par=yes&id={{id}}">..</a></li>
-              {% for item in file_list %}
-                {% if '.' != item[0] %}
-                  <li><strong><a href="/volumes/cd?path={{cwd + '/' + item}}&id={{id}}">{{item}}</a></strong><a href="/volumes/add?dir={{cwd + '/' + item}}&id={{id}}"> (Add)</a></li>
-                {% else %}
-                  <li>{{item}}</li>
-                {% endif%}
-              {% endfor %}
-            </ul>
-          </body>
-        </html>
+  </form>
+  <table class="file_table">
+        <tr>
+          <th></th>
+          <th></th>
+          <th></th>
+        </tr>
+        <tr>
+          <td><a href="/volumes/cd?path={{ cwd }}&go_par=yes&id={{ id }}">..</a></td>
+          <td></td>
+        </tr>
+      {% for file in file_info %}
+      <tr>
+        {% if '.' != file[0][0] %}
+          {% if file[1] == "file" %}
+            <td><a>{{file[0]}}</a></td><td></td><td><a href="/volumes/add?path={{cwd + '/' + file[0]}}&id={{id}}"> (Add)</a></td>
+          {% else %}
+            <td><strong><a href="/volumes/cd?path={{cwd + '/' + file[0]}}&id={{id}}">{{file[0]}}</a></strong></td><td></td><td><a href="/volumes/add?path={{cwd + '/' + file[0]}}&id={{id}}"> (Add)</a></td>
+          {% endif%}
+        {% else %}
+          <td></td><td></td>
+        {% endif%}
+      {% endfor %}
+    </table>
+  </body>
+</html>
 {% endblock %}
 

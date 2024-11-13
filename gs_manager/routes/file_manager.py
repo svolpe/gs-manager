@@ -36,7 +36,7 @@ def upload():
         
         fname = request.files['file']
 
-        cwd = request.form.get('cwd', os.getcwd())
+        cwd = request.form.get('cwd', "/dev/null")
         
         shared_prefix = os.path.commonprefix([cwd, PATH_STORAGE])
 

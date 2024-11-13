@@ -1,11 +1,13 @@
 from flask import (
-    Blueprint, flash, redirect, render_template, request, url_for, g, render_template_string
+    Blueprint, flash, send_file, redirect, render_template, request, url_for, g, render_template_string
 )
 
 import os
 import subprocess
 import shutil
 from ..extensions import db, change_dir_safe, PATH_STORAGE
+import shutil
+
 
 fm = Blueprint('file_manager', __name__)
 
@@ -21,6 +23,11 @@ def prefix_removal(text, prefixes):
     if first_word.startswith(prefixes):
         return text[len(prefixes):]
     return text
+
+@fm.route('/file_manager/download')
+def download():
+    path = request.args.get('path')
+    return send_file(path, as_attachment=True)
 
 
 @fm.route('/file_manager/upload', methods=['GET', 'POST'])
@@ -55,9 +62,17 @@ def index():
     cwd = os.getcwd()
     new_path = request.args.get('path', cwd)
     cwd = change_dir_safe(new_path)
-    file_list2 = os.listdir(cwd)
+    file_list = os.scandir(cwd)
+    file_info = []
+    for file in file_list:
+        if file.is_dir():
+            file_info.append([file.name, 'dir'])
+        elif file.is_file():
+            file_info.append([file.name, 'file'])
+        else:
+            continue
     file_list = subprocess.check_output('ls', shell=True).decode('utf-8').split('\n')  # use 'dir' command on Windows
-    return render_template('file_manager/index.html', file_list=file_list2,
+    return render_template('file_manager/index.html', file_info=file_info,
                             cwd=cwd, )
 
 

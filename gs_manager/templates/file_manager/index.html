@@ -36,12 +36,16 @@
           <td><a href="/file_manager/cd?path={{ cwd }}&go_par=yes">..</a></td>
           <td></td>
         </tr>
-          {% for item in file_list %}
+          {% for file in file_info %}
             <tr>
-              {% if '.' != item[0] %}
-                <td><strong><a href="/file_manager/cd?path={{cwd + '/' + item}}">{{item}}</a></strong></td><td></td><td><a href="/file_manager/rm?path={{cwd + '/' + item}}"> (Delete)</a></td>
+              {% if '.' != file[0][0] %}
+                {% if file[1] == "file" %}
+                  <td><strong><a href="/file_manager/cd?path={{cwd + '/' + file[0]}}">{{file[0]}}</a></strong></td><td><a href="/file_manager/download?path={{cwd + '/' + file[0]}}"> (Download)</a></td><td><a href="/file_manager/rm?path={{cwd + '/' + file[0]}}"> (Delete)</a></td>
+                {% else %}
+                  <td><strong><a href="/file_manager/cd?path={{cwd + '/' + file[0]}}">{{file[0]}}</a></strong></td><td></td><td><a href="/file_manager/rm?path={{cwd + '/' + file[0]}}"> (Delete)</a></td>
+                {% endif%}
               {% else %}
-                <td>{{item}}</td><td></td>
+                <td>{{file[0]}}</td><td></td>
               {% endif%}
           {% endfor %}
       </table>

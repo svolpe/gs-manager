@@ -14,12 +14,12 @@
       <div align="center">
         <h1>Local file system</h1>
       </div>
-        <form action="/file_manager/md">
+        <form name="newdir" action="/file_manager/md">
           <input type="submit" value="New folder"/>
           <input name="folder" type="text" value="new_folder"/>
         </form>
 
-        <form action = "/file_manager/upload" method = "post" enctype="multipart/form-data">
+        <form name="fupload" action = "/file_manager/upload" onsubmit="return validateForm()" method = "post" enctype="multipart/form-data">
           <label> Upload File: </label>
             <input type="file" name="file" />
             <input type="hidden" id="cwd", name="cwd", value="{{ cwd }}">
@@ -73,7 +73,14 @@
             return false;
         }
     }
-
+    
+    function validateForm() {
+      let x = document.forms["fupload"]["file"].value;
+      if (x == "") {
+        alert("File must be selected");
+        return false;
+      }
+    }
       </script>
         
     </body>

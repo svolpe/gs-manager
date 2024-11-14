@@ -7,8 +7,6 @@ from .models.blog import Post
 from .models.server_nwn import (ServerConfigs, ServerCmds, PcActiveLog, VolumesInfo, VolumesDirs, ServerVolumes,
                                 ServerStatus)
 
-from flask_sqlalchemy import SQLAlchemy
-
 
 def create_app(test_config=None):
     # create and configure the app

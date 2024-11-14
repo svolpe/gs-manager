@@ -9,7 +9,10 @@ class Config(object):
     SECRET_KEY = "dev"
     STATIC_FOLDER = 'static'
     TEMPLATES_FOLDER = 'templates'
-
+    
+    # SQLALCHEMY_ENGINE_OPTIONS lets you set connection options. The example below increases the timeout
+    # in order to reduce write timeout errors
+    SQLALCHEMY_ENGINE_OPTIONS = { 'connect_args': { 'timeout': 10 }}
 
 class ProductionConfig(Config):
     """Production config."""

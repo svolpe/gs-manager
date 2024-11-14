@@ -8,3 +8,20 @@ This is the source code for an open-source project for managing NeverWinter Nigh
 * Use google drive to actively back up configurations, character and module vaults (under development)
 ## Installation
 * Under construction
+
+
+## Testing
+### Locking sqlite using command line:
+
+* Lock db
+```
+PRAGMA locking_mode = EXCLUSIVE;
+BEGIN EXCLUSIVE;
+SELECT * FROM pc_active_log LIMIT 1;
+COMMIT;
+```
+* Unlock db
+```
+PRAGMA locking_mode = NORMAL; 
+SELECT * FROM pc_active_log LIMIT 1;
+```

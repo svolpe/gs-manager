@@ -7,12 +7,12 @@
     {% if g.user %}
       <li><span>{{ g.user['username'] }}</span>
       <li><a href="{{ url_for('file_manager.index') }}">File Manager</a>
-      <li><a href="{{ url_for('server_config.index') }}">Server Configurations</a>
-      <li><a href="{{ url_for('players.index') }}">Logged In Players</a>
-      <li><a href="{{ url_for('volume_manager.index') }}">Volumes Manager</a>
+      <li><a href="{{ url_for('server_config.index') }}">Server Configs</a>
+      <li><a href="{{ url_for('players.index') }}">Active Players</a>
+      <li><a href="{{ url_for('volume_manager.index') }}">Volumes</a>
       <li><a href="{{ url_for('auth.logout') }}">Log Out</a>
+      <li><a href="{{ url_for('auth.register') }}">Reg</a>
     {% else %}
-      <li><a href="{{ url_for('auth.register') }}">Register</a>
       <li><a href="{{ url_for('auth.login') }}">Log In</a>
     {% endif %}
   </ul>

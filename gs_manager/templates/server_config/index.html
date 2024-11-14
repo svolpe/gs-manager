@@ -17,6 +17,7 @@
           <div class="about">Server Name {{ post['module_name'] }} on port {{ post['port'] }}</div>
 
         </div>
+        {% if g.user %}
           <a class="action" href="{{ url_for('server_config.delete', id=post['id']) }}">Delete</a>
           {% if server_status == "down" %}
             <a class="status_error"> Backend Down </a>
@@ -36,16 +37,18 @@
           {% else %}
             <a class="status_stopped"> Manually Stopped </a>
           {% endif %}
-
-          {% if post['is_active'] == 0 %}
-            <a></a>
-          {% elif post['status'] == "running" %}
+        {% endif %}
+        {% if post['is_active'] == 0 %}
+          <a></a>
+        {% elif g.user %}
+          {% if post['status'] == "running"%}
             <a class="action" href="{{ url_for('server_config.stop', id=post['id']) }}">stop</a>
           {% else %}
             <a class="action" href="{{ url_for('server_config.start', id=post['id']) }}">Start</a>
           {% endif %}
           <a class="action" href="{{ url_for('server_config.copy', id=post['id']) }}">Copy</a>
           <a class="action" href="{{ url_for('server_config.update', id=post['id']) }}">Edit</a>
+        {% endif %}
       </header>
     </article>
     {% if not loop.last %}

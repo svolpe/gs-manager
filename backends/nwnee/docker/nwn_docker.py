@@ -8,17 +8,19 @@ import db
 
 
 class NwnServer:
-    def __init__(self, server_cfg, docker_name, image_name='nwnxee/unified', network='host'):
-        self._load_nwn_cfg(server_cfg)
-        self.client = docker.APIClient()
-        self._socket = None
-        self.image_name = image_name
-        self.network = network
-        self.docker_name = docker_name
-        self.container = None
+    def __init__(self, backend_cfg, server_cfg, docker_name):
         self.server_cfg_id = server_cfg['id']
         self.server_cfg = server_cfg
+        self.backend_cfg = backend_cfg
+        self._load_nwn_cfg()
+        self.client = docker.APIClient()
+        self._socket = None
+        self.image_name = backend_cfg.DOCKER_IMAGE
+        self.network = backend_cfg.DOCKER_NETWORK
+        self.docker_name = docker_name
+        self.container = None
 
+        
     def get_server_name(self):
         return self.server_cfg['server_name']
 
@@ -42,9 +44,9 @@ class NwnServer:
         cfg_host = self.client.create_host_config(network_mode=self.network, binds=volumes)
 
         self.container = self.client.create_container(self.image_name,
-                                                      name=self.docker_name,
-                                                      stdin_open=True,
-                                                      host_config=cfg_host, environment=self._cfg)
+                                                    name=self.docker_name,
+                                                    stdin_open=True,
+                                                    host_config=cfg_host, environment=self._cfg)
 
     def container_status(self):
         # TODO: Look into setting parameters in DB as boolean instead of int.
@@ -105,8 +107,8 @@ class NwnServer:
 
                 if len(row) == 5:
                     users[row[4].strip()] = {'id': row[0].strip(), 'player_name': row[1].strip(), 'ip_addr': row[2].strip(),
-                                             'character_name': row[3].strip(), 'docker_name': self.docker_name,
-                                             'server_name': self.server_cfg['server_name']}
+                                            'character_name': row[3].strip(), 'docker_name': self.docker_name,
+                                            'server_name': self.server_cfg['server_name']}
 
         return users
 
@@ -165,42 +167,40 @@ class NwnServer:
     def stop(self):
         self.client.stop(self.container)
 
-    def _load_nwn_cfg(self, cfg):
+    def _load_nwn_cfg(self):
         # See https://nwnxee.github.io/unified/group__nwnx.html
         self._cfg = {
-            'NWN_PORT': cfg['port'],
-            'NWN_MODULE': cfg['module_name'],
-            'NWN_SERVERNAME': cfg['server_name'],
-            'NWN_PUBLICSERVER': cfg['public_server'],
-            'NWN_MAXCLIENTS': cfg['max_players'],
-            'NWN_MINLEVEL': cfg['min_level'],
-            'NWN_MAXLEVEL': cfg['max_level'],
-            'NWN_PAUSEANDPLAY': cfg['pause_play'],
-            'NWN_PVP': cfg['pvp'],
-            'NWN_SERVERVAULT': cfg['server_vault'],
-            'NWN_ELC': cfg['enforce_legal_char'],
-            'NWN_ILR': cfg['item_lv_restrictions'],
-            'NWN_GAMETYPE': cfg['game_type'],
-            'NWN_ONEPARTY': cfg['one_party'],
-            'NWN_DIFFICULTY': cfg['difficulty'],
-            'NWN_AUTOSAVEINTERVAL': cfg['auto_save_interval'],
-            'NWN_RELOADWHENEMPTY': cfg['reload_when_empty'],
-            'NWN_PLAYERPASSWORD': cfg['player_pwd'],
-            'NWN_DMPASSWORD': cfg['dm_pwd'],
-            'NWN_ADMINPASSWORD': cfg['admin_pwd']
+            'NWN_PORT': self.server_cfg['port'],
+            'NWN_MODULE': self.server_cfg['module_name'],
+            'NWN_SERVERNAME': self.server_cfg['server_name'],
+            'NWN_PUBLICSERVER': self.server_cfg['public_server'],
+            'NWN_MAXCLIENTS': self.server_cfg['max_players'],
+            'NWN_MINLEVEL': self.server_cfg['min_level'],
+            'NWN_MAXLEVEL': self.server_cfg['max_level'],
+            'NWN_PAUSEANDPLAY': self.server_cfg['pause_play'],
+            'NWN_PVP': self.server_cfg['pvp'],
+            'NWN_SERVERVAULT': self.server_cfg['server_vault'],
+            'NWN_ELC': self.server_cfg['enforce_legal_char'],
+            'NWN_ILR': self.server_cfg['item_lv_restrictions'],
+            'NWN_GAMETYPE': self.server_cfg['game_type'],
+            'NWN_ONEPARTY': self.server_cfg['one_party'],
+            'NWN_DIFFICULTY': self.server_cfg['difficulty'],
+            'NWN_AUTOSAVEINTERVAL': self.server_cfg['auto_save_interval'],
+            'NWN_RELOADWHENEMPTY': self.server_cfg['reload_when_empty'],
+            'NWN_PLAYERPASSWORD': self.server_cfg['player_pwd'],
+            'NWN_DMPASSWORD': self.server_cfg['dm_pwd'],
+            'NWN_ADMINPASSWORD': self.server_cfg['admin_pwd']
         }
         # TODO: This is a temporary hack for DB support a full configuration interface will be added later
-        if cfg['database'] == 'yes':
+        if self.server_cfg['database'] == 'yes':
             self._cfg['NWNX_CORE_SKIP_ALL'] = 'y'
             self._cfg['NWNX_SQL_SKIP'] = 'n'
-            self._cfg['NWNX_SQL_DATABASE'] = "nwn"
-            self._cfg['NWNX_SQL_PASSWORD'] = "atbp1994"
-            self._cfg['NWNX_SQL_USERNAME'] = "nwn"
-            self._cfg['NWNX_SQL_HOST'] = "172.17.0.1"
-            self._cfg['NWNX_SQL_PORT'] = "3306"
-            self._cfg['NWNX_SQL_TYPE'] = "MYSQL"
-
-
+            self._cfg['NWNX_SQL_DATABASE'] = self.backend_cfg.nwnx_sql_cfg["NWNX_SQL_DATABASE"]
+            self._cfg['NWNX_SQL_PASSWORD'] = self.backend_cfg.nwnx_sql_cfg["NWNX_SQL_PASSWORD"]
+            self._cfg['NWNX_SQL_USERNAME'] = self.backend_cfg.nwnx_sql_cfg["NWNX_SQL_USERNAME"]
+            self._cfg['NWNX_SQL_HOST'] = self.backend_cfg.nwnx_sql_cfg["NWNX_SQL_HOST"]
+            self._cfg['NWNX_SQL_PORT'] = self.backend_cfg.nwnx_sql_cfg["NWNX_SQL_PORT"]
+            self._cfg['NWNX_SQL_TYPE'] = self.backend_cfg.nwnx_sql_cfg["NWNX_SQL_TYPE"]
 
 
         # unused NWN environment variables:

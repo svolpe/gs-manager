@@ -1,8 +1,8 @@
 import datetime
 import sqlite3
+from backends.nwnee.config import ProductionConfig as config
 
-DBPATH = 'instance/gsmanager.sqlite'
-
+DBPATH = config.GS_MANAGER_DATABASE_URI
 
 def update_heartbeat(component):
     con = sqlite3.connect(DBPATH)

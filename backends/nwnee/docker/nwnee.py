@@ -2,10 +2,10 @@ from backends.nwnee.docker.nwn_docker import NwnServer
 import docker
 import time
 import db
-
+from backends.nwnee.config import ProductionConfig as backend_config
 
 if __name__ == "__main__":
-    servers = dict()
+    servers = {}
 
     client = docker.APIClient()
 
@@ -15,7 +15,7 @@ if __name__ == "__main__":
     for cfg in server_cfgs:
         docker_name = "nwn_" + str(cfg['id'])
 
-        server = NwnServer(cfg, docker_name=docker_name)
+        server = NwnServer(backend_config, cfg, docker_name=docker_name)
 
         if cfg['is_active'] == 1:
             server.create_container()
@@ -47,7 +47,7 @@ if __name__ == "__main__":
                 cfg = db.sql_data_to_list_of_dicts(f"SELECT * FROM server_configs where id = {server_id}")[0]
                 # TODO: the current way of setting the docker name needs to be cleaned up!
                 docker_name = "nwn_" + str(server_id)
-                server = NwnServer(cfg, docker_name=docker_name)
+                server = NwnServer(backend_config, cfg, docker_name=docker_name)
                 server.create_container()
                 server.start()
                 servers[server_id] = server

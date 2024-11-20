@@ -18,7 +18,7 @@ import os, datetime
 
 sc = Blueprint('server_config', __name__)
 
-"""The best way to movee forward (for now) is to have a route that will start all active backends and one to 
+"""The best way to move forward (for now) is to have a route that will start all active backends and one to 
     list all active members. There should also be a background job tht 
 """
 

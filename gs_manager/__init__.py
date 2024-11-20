@@ -41,7 +41,7 @@ def create_app(test_config=None):
 
     # Ported to using a class
     from .routes.file_manager import FileManagerBp
-    file_manager = FileManagerBp(path_storage= app.config['GS_PATH_STORAGE'])
+    file_manager = FileManagerBp(path_storage=app.config['GS_PATH_STORAGE'])
     app.register_blueprint(file_manager.fm)
 
     # Ported to using a class

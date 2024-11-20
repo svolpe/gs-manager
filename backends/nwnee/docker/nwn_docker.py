@@ -1,11 +1,11 @@
 import docker
 import time
 import db
+from os import path
 
 # TODO: It might make sense to remove all the low level string manipulation/extraction methods into their own class
 # TODO: Look into better structuring the __init__. Should the client be passed to the constructor or created inside?
 # TODO: Think through how start() should handle if a container exists or is already running.
-
 
 class NwnServer:
     def __init__(self, backend_cfg, server_cfg, docker_name):
@@ -30,7 +30,6 @@ class NwnServer:
             container = nwn_containers[0]
             inspect_dict = self.client.inspect_container(container)
             state = inspect_dict['State']
-
             # Remove old container before creating new one
             if 'Status' in state:
                 if state['Status'] == 'running':
@@ -41,13 +40,19 @@ class NwnServer:
         # Remove any old copies of the container
         self.remove_container()
         volumes = db.get_volumes(self.server_cfg_id)
+        
+        # TODO fix this hack. Come up with a better way to handle user/root access of shared volumes
+        scripts_dir = f"{path.dirname(path.realpath(__file__))}/scripts"
+        volumes[scripts_dir] = {'bind':'/opt/scripts', 'mode':'rw'}
+            
+
         cfg_host = self.client.create_host_config(network_mode=self.network, binds=volumes)
 
         self.container = self.client.create_container(self.image_name,
                                                     name=self.docker_name,
                                                     stdin_open=True,
-                                                    host_config=cfg_host, environment=self._cfg)
-
+                                                    host_config=cfg_host, environment=self._cfg,
+                                                    entrypoint = "/bin/bash /opt/scripts/start_nwn.sh 1000 1001 /nwn/run-server.sh")
     def container_status(self):
         # TODO: Look into setting parameters in DB as boolean instead of int.
         if self.server_cfg['is_active'] == 0:

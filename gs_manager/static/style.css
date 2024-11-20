@@ -124,6 +124,11 @@ nav ul li a, nav ul li span, header .action {
   resize: vertical;
 }
 
+.char_sheet textarea {
+  min-height: 1em;
+  resize: vertical;
+}
+
 input.danger {
   color: #cc2f2e;
 }

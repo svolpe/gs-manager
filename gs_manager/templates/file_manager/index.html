@@ -41,13 +41,24 @@
               {% if '.' != file[0][0] %}
                 <div filename={{file[0]}}>
                 {% if file[1] == "file" %}
-                  <td><a>{{file[0]}}</a></td><td><a href="/file_manager/download?path={{cwd + '/' + file[0]}}"> (Download)</a></td><td><a href="/file_manager/rm?path={{cwd + '/' + file[0]}}" id="{{file[0]}}" onclick="return delFileCheck(this.id);"> (Delete)</a></td>
+                  <td><a>{{file[2]}}</a></td>
+                  <td><a href="/file_manager/download?path={{cwd + '/' + file[0]}}"> (Download)</a></td>
+                  <td></td>
+                  <td><a href="/file_manager/rm?path={{cwd + '/' + file[0]}}" id="{{file[0]}}" onclick="return delFileCheck(this.id);"> (Delete)</a></td>
+                {% elif file[1] == "bic" %}
+                  <td><a>{{file[2]}}</a></td>
+                  <td><a href="/file_manager/download?path={{cwd + '/' + file[0]}}"> (Download)</a></td>
+                  <td><a href="/file_manager/edit?path={{cwd + '/' + file[0]}}"> (Edit)</a></td>
+                  <td><a href="/file_manager/rm?path={{cwd + '/' + file[0]}}" id="{{file[0]}}" onclick="return delFileCheck(this.id);"> (Delete)</a></td>
                 {% else %}
-                  <td><strong><a href="/file_manager/cd?path={{cwd + '/' + file[0]}}" >{{file[0]}}</a></strong></td><td></td><td><a href="/file_manager/rm?path={{cwd + '/' + file[0]}}" id="{{file[0]}}" onclick="return delDirCheck(this.id);"> (Delete)</a></td>
+                  <td><strong><a href="/file_manager/cd?path={{cwd + '/' + file[0]}}" >{{file[2]}}</a></strong></td>
+                  <td></td>
+                  <td></td>
+                  <td><a href="/file_manager/rm?path={{cwd + '/' + file[0]}}" id="{{file[0]}}" onclick="return delDirCheck(this.id);"> (Delete)</a></td>
                 {% endif%}
                 </div>
               {% else %}
-                <td></td><td></td>
+                <td></td><td></td><td></td>
               {% endif%}
           {% endfor %}
       </table>

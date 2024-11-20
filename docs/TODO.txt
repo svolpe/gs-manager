@@ -1,0 +1,6 @@
+Add support for DB management
+Add field in volumes_dir for type (modules, vault, other...)
+Make registering people more secure
+Figure out how to handle initial condition where db does not exist before the flask app but the server app runs too
+Remove tables and replace them with divs where it makes sense
+    This is part of getting the delete further away from the file/dir name

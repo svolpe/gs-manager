@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h1>{% block title %}Character editor{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+    <TABLE class="char_sheet">
+      <form method=post>
+        <input type=hidden name=state value="update_char">
+        <input type=hidden name=file_name value="{{ file_name }}">
+        <tr>
+          <TR><TD><IMG SRC="{{ url_for('static', filename=char_data['portrait']) }}" class="image"></TD><TD></TD></TR>
+          <TR><TD><b>Player Name:</b></TD><TD> TBD</TD></TR>
+          <TR><TD><b>Character First Name:</b></TD><TD><textarea rows=1 cols=20 name=first_name>{{ char_data['first_name'] }}</textarea></TD></TR>
+          <TR><TD><b>Character Last Name:</b></TD><TD><textarea  name=last_name>{{char_data['last_name'] }}</textarea></TD></TR>
+          <TR><TD><b>Description:</b></TD><TD><textarea  name=description>{{char_data['description'] }}</textarea></TD></TR>
+          <TR><TD><b>Alignment:</b></TD><TD>{{char_data['alignment']}}</TD></TR>
+          <TR><TD><b>Gender:</b></TD><TD>{{char_data['gender']}}</TD></TR>
+          <TR><TD><b>Deity:</b></TD><TD>{{char_data['deity']}}</textarea></TD></TR>
+          <TR><TD><b>Age:</b></TD><TD>{{char_data['age']}}</TD></TR>
+          <TR><TD><b>Race:</b></TD><TD>{{char_data['race']}}</TD></TR>
+          <TR><TD><b>Class:</b></TD><TD>{{char_data['class']}}</TD></TR>
+          <TR><TD><b>Level:</b></TD><TD>{{char_data['level']}}</TD></TR>
+          <TR><TD><b>Gold:</b></TD><TD>{{char_data['gold']}}</TD></TR>
+          <TR><TD><b>HitPoints:</b></TD><TD>{{char_data['hp']}}</TD></TR>
+          <TR><TD><b>Experience:</b></TD><TD>{{char_data['exp']}}</TD></TR>
+          <TR><TD><b>Armor Class:</b></TD><TD>{{char_data['ac']}}</TD></TR>
+          <TR><TD><b>Str:</b></TD><TD>{{char_data['str']}}</TD></TR>
+          <TR><TD><b>Dex:</b></TD><TD>{{char_data['dex']}}</TD></TR>
+          <TR><TD><b>Int:</b></TD><TD>{{char_data['int']}}</TD></TR>
+          <TR><TD><b>Wis:</b></TD><TD>{{char_data['wis']}}</TD></TR>
+          <TR><TD><b>Con:</b></TD><TD>{{char_data['con']}}</TD></TR>
+          <TR><TD><b>Chr:</b></TD><TD>{{char_data['cha']}}</TD></TR>
+          <TR><TD><input type=submit value="Save Changes"></TD><TD></TD></TR>
+    </form>
+    <TR><TD></TD><TD></TD></TR>
+  </TABLE>
+    <form method=post>
+        <input type=hidden name=file_name value="{{ file_name }}">
+        <CENTER><input type=submit value="Return to Character List" name=OK></CENTER>
+    </form>
+{% endblock %}

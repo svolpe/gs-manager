@@ -237,6 +237,8 @@ class Character:
         return f'{align1} {align2}';
     
     def _save_data(self, field, value):
+        # Remove new line
+        value = value.replace("\n", "")
         fp = tempfile.NamedTemporaryFile(mode='wt', delete=False, prefix="gsm_")
         fp.write(f"%char = '{self.file_name}';\n")
         fp.write(f"/{field} = '{value}';\n")
@@ -244,10 +246,31 @@ class Character:
         fp.write(f"close %char;\n")
 
         fp.close()
-
+        
         #Execute legacy Mono command
         arguments = [fp.name]
         command = ["Moneo", *arguments]
         subprocess.run(command, stdout=subprocess.PIPE)
         # Remove temp file
         unlink(fp.name)
+
+    def _read_data_moneo(self, field):        
+        fp = tempfile.NamedTemporaryFile(mode='wt', delete=False, prefix="gsm_")
+        fp.write(f"%char = '{self.file_name}';\n")
+        fp.write(f"print /{field};\n")
+        fp.write(f"close %char;\n")
+
+        fp.close()
+        
+        #Execute legacy Mono command
+        arguments = [fp.name]
+        command = ["Moneo", *arguments]
+        proc = subprocess.Popen(command, stdout=subprocess.PIPE)
+        output = proc.stdout.read()
+        # Remove temp file
+        unlink(fp.name)
+        try:
+            description = output.decode()
+        except:
+            description = "Error in reading character"
+        return description

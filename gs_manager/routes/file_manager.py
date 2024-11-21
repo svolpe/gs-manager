@@ -37,6 +37,7 @@ class FileManagerBp(object):
         def upload():
             if request.method != 'POST':
                 return
+            
             fname = request.files['file']
 
             if fname.filename == '':
@@ -148,12 +149,13 @@ class FileManagerBp(object):
             file = request.args.get('path')
             my_char = Character()
             my_char.load_file(file)
-            description = my_char.npc_data['Description'].value
-            # desc_over = my_char.npc_data['DescriptionOverr'].value
-            
-            # if desc_over:
-            #    description = description + desc_over
-
+            description = my_char._read_data_moneo('Description') 
+            # Not all characters have last names so lets check first
+            if "LastName" in my_char.npc_data:
+                last_name = my_char.npc_data['LastName'].value,
+            else:
+                last_name = ""
+                
             if request.method == 'POST':
                 state = request.form.get('state', '')
                 file_name = request.form.get('file_name', '')
@@ -178,7 +180,7 @@ class FileManagerBp(object):
             char_data  = dict(
                             portrait = f"portraits/{my_char.npc_data['Portrait'].value}.jpg",
                             first_name = my_char.npc_data['FirstName'].value,
-                            last_name = my_char.npc_data['LastName'].value,
+                            last_name = last_name,
                             alignment = my_char.get_alignment(),
                             gender = my_char.npc_data['Gender'].value,
                             deity = my_char.npc_data['Deity'].value,

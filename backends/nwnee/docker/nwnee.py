@@ -7,8 +7,14 @@ from backends.nwnee.config import ProductionConfig as backend_config
 if __name__ == "__main__":
     servers = {}
 
-    client = docker.APIClient()
-
+    while True:
+        try:
+            client = docker.APIClient()
+            break
+        except:
+            print("ERROR: Could not connect to docker Client!")
+        time.sleep(1)
+    
     server_cfgs = db.sql_data_to_list_of_dicts("SELECT * FROM server_configs")
 
     t1 = time.time()
@@ -20,7 +26,6 @@ if __name__ == "__main__":
         if cfg['is_active'] == 1:
             server.create_container()
             server.start()
-
         servers[str(cfg['id'])] = server
 
     print(f"Time to initialize docker images: {round(time.time() - t1, 1)}s")

@@ -40,7 +40,7 @@ You can browser up and down directories by clicking on the links and the ".." le
 ![Manager Server Modules](https://github.com/svolpe/gs-manager/blob/main/docs/screenshots/file_manager_module.png)
 ##### Characters
 ##### Character Editor
-![Character Editor]([https://github.com/svolpe/gs-manager/blob/main/docs/screenshots/players.png](https://github.com/svolpe/gs-manager/blob/main/docs/screenshots/file_manager_character_editor.png))
+![Character Editor](https://github.com/svolpe/gs-manager/blob/main/docs/screenshots/file_manager_character_editor.png)
 
 ![Manager Server Modules](https://github.com/svolpe/gs-manager/blob/main/docs/screenshots/file_manager_character.png)
 #### Logged in Users

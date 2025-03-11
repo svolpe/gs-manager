@@ -13,7 +13,9 @@ This is the source code for an open-source project for managing NeverWinter Nigh
     * Will be configurable and will allow for distribution lists
   * Pulling of specific NWN docker versions and updating to latest
   * Selecting different docker images other than nwn
-  * Full Featured Character editor
+  * Full featured vharacter editor
+  * Log file viewer
+  * Unit tests
 * Features considered but not yet planned
   * Revamp integrated file manager to be more modern
   * Support for managing other game servers

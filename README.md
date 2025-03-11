@@ -7,6 +7,7 @@ This is the source code for an open-source project for managing NeverWinter Nigh
   * Manage databases used for persistant worlds
   * View actively logged in players
   * Very basic character editor (not stable)
+  * Restful API
 * Features under development
   * Support for emailing/texting distribution lists when players log on
     * Will be configurable and will allow for distribution lists

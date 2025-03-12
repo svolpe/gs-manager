@@ -5,6 +5,8 @@
 {% endblock %}
 
 {% block content %}
+<div class="row-1"></class>
+<div class="row-2">
 <table>
   <tbody><tr>
       <td>Minimum Logged on date:</td>
@@ -37,6 +39,7 @@
       </a>
     </tbody>
   </table>
+</div>
 {% endblock %}
 {% block scripts %}
 <script>
@@ -67,8 +70,11 @@
         format: 'MMMM Do YYYY'
     });
 
-    var table = $('#data').DataTable({
+    var table = new DataTable('#data',{
       ajax: '/player_history/data',
+      layout: {
+        top1: 'searchPanes'
+      },
       columns: [
         {data: 'player_name', orderable: true, searchable: true},
         {data: 'character_name', orderable: true, searchable: true},
@@ -79,7 +85,20 @@
       columnDefs: [ //Sun, 10 Nov 2024 08:33:52 GMT	 'ddd, DD MMM YYYY HH:mm:ss GMT','Do DD MMM YYYY'
         {type:  'date', targets: 3, render: DataTable.render.datetime('ddd, DD MMM YYYY h:mm:ss a', 'en')},
         {type:  'date', targets: 4, render: DataTable.render.datetime('ddd, DD MMM YYYY h:mm:ss a', 'en')},
-        
+        {
+            searchPanes:{
+                initCollapsed: true,   
+                show: true,
+            },
+            targets: [0]
+        },
+        {
+            searchPanes:{
+                show: false,
+            },
+            targets: [1,2,3,4]
+        },
+  
       ],
     });
 

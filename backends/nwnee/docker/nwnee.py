@@ -111,20 +111,20 @@ if __name__ == "__main__":
                                 or a_user['docker_name'] != l_user['docker_name']):
                             user = active_users[key]
                             update_data.append((user['player_name'], user['character_name'], user['ip_addr'],
-                                                user['docker_name'], user['server_name'], key))
+                                                user['docker_name'], user['server_name'], key, last_active_users[key]['id']))
                     # All remaining ones need to be set as logged off
                     else:
-                        logoff_data.append((key,))
+                        logoff_data.append((last_active_users[key]['id'],))
                 if len(insert_data):
                     query = '''insert into pc_active_log(cd_key, player_name, character_name, ip_addr, docker_name, 
                             server_name) values(?, ?, ?, ?, ?, ?)'''
                     db.sql_update_many(query, insert_data)
                 if len(update_data):
                     query = '''update pc_active_log set player_name=?, character_name=?, ip_addr=?, docker_name=?, 
-                    server_name=? where cd_key = ?'''
+                    server_name=?, cd_key = ? where id = ?'''
                     db.sql_update_many(query, update_data)
                 if len(logoff_data):
-                    query = '''update pc_active_log set logoff_time = CURRENT_TIMESTAMP where cd_key = ?'''
+                    query = '''update pc_active_log set logoff_time = CURRENT_TIMESTAMP where id = ?'''
                     db.sql_update_many(query, logoff_data)
 
         # Sleep to release the CPU for other processing

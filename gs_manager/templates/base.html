@@ -3,7 +3,8 @@
   
   <head>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link href="https://nightly.datatables.net/css/dataTables.dataTables.css" rel="stylesheet" type="text/css" />  
+    <link href="https://nightly.datatables.net/css/dataTables.dataTables.css" rel="stylesheet" type="text/css" />
+    <link href="https://cdn.datatables.net/datetime/1.5.5/css/dataTables.dateTime.min.css" rel="stylesheet" type="text/css" />
   </head>
   <nav>
       <h4>{% block title %}{% endblock %}</h4>
@@ -31,6 +32,7 @@
     <script type="text/javascript" charset="utf8" src="https://code.jquery.com/jquery-3.7.1.js"></script>
     <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/2.2.2/js/dataTables.js"></script>
     <script type="text/javascript" charset="utf8" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.2/moment.min.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/datetime/1.5.5/js/dataTables.dateTime.min.js"></script>    
     {% block scripts %}{% endblock %}
   </body>
 </html>

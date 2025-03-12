@@ -5,6 +5,16 @@
 {% endblock %}
 
 {% block content %}
+<table>
+  <tbody><tr>
+      <td>Minimum Logged on date:</td>
+      <td><input type="text" id="min" name="min"></td>
+  </tr>
+  <tr>
+      <td>Maximum Logged on date:</td>
+      <td><input type="text" id="max" name="max"></td>
+  </tr>
+</tbody></table>
   <table id="data" class="table table-striped player_hist">
     <thead>
       <tr>
@@ -31,7 +41,32 @@
 <script>
   
   $(document).ready(function () {
-    $('#data').DataTable({
+    let minDate, maxDate;
+    // Custom filtering function which will search data in column four between two values
+    DataTable.ext.search.push(function (settings, data, dataIndex) {
+        let min = minDate.val();
+        let max = maxDate.val();
+        let date = new Date(data[3]);
+    
+        if (
+            (min === null && max === null) ||
+            (min === null && date <= max) ||
+            (min <= date && max === null) ||
+            (min <= date && date <= max)
+        ) {
+            return true;
+        }
+        return false;
+    });
+    // Create date inputs
+    minDate = new DateTime('#min', {
+        format: 'MMMM Do YYYY'
+    });
+    maxDate = new DateTime('#max', {
+        format: 'MMMM Do YYYY'
+    });
+
+    var table = $('#data').DataTable({
       ajax: '/player_history/data',
       columns: [
         {data: 'player_name', orderable: true, searchable: true},
@@ -45,6 +80,11 @@
         {type:  'date', targets: 4, render: DataTable.render.datetime('ddd, DD MMM YYYY h:mm:ss a', 'en')},
         
       ],
+    });
+
+    // Refilter the table
+    document.querySelectorAll('#min, #max').forEach((el) => {
+        el.addEventListener('change', () => table.draw());
     });
   });
 </script>

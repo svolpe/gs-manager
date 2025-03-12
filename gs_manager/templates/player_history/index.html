@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h1>{% block title %}Player History{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+  <table id="data" class="table table-striped player_hist">
+    <thead>
+      <tr>
+        <th>Player Name</th>
+        <th>Character Name</th>
+        <th>Server Name</th>
+        <th>Logged on</th>
+        <th>Logged off</th>
+      </tr>
+    </thead>
+    <tbody>
+      <a class="player_hist"> 
+        <tr>
+          <td>character_name</td>
+          <td>server_name</td>
+          <td>logon_time</td>
+          <td>logoff_time</td>
+        </tr>
+      </a>
+    </tbody>
+  </table>
+{% endblock %}
+{% block scripts %}
+<script>
+  
+  $(document).ready(function () {
+    $('#data').DataTable({
+      ajax: '/player_history/data',
+      columns: [
+        {data: 'player_name', orderable: true, searchable: true},
+        {data: 'character_name', orderable: true, searchable: true},
+        {data: 'server_name', orderable: true, searchable: true},
+        {data: 'logon_time', orderable: true, searchable: true},
+        {data: 'logoff_time', orderable: true, searchable: true}
+      ],
+      columnDefs: [ //Sun, 10 Nov 2024 08:33:52 GMT	 'ddd, DD MMM YYYY HH:mm:ss GMT','Do DD MMM YYYY'
+        {type:  'date', targets: 3, render: DataTable.render.datetime('ddd, DD MMM YYYY h:mm:ss a', 'en')},
+        {type:  'date', targets: 4, render: DataTable.render.datetime('ddd, DD MMM YYYY h:mm:ss a', 'en')},
+        
+      ],
+    });
+  });
+</script>
+{% endblock %}

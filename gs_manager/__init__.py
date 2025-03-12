@@ -39,6 +39,9 @@ def create_app(test_config=None):
     from .routes import players
     app.register_blueprint(players.pc)
 
+    from .routes import player_history
+    app.register_blueprint(player_history.ph)
+
     # Ported to using a class
     from .routes.file_manager import FileManagerBp
     file_manager = FileManagerBp(path_storage=app.config['GS_PATH_STORAGE'])

@@ -12,7 +12,20 @@ class PcActiveLog(db.Model):
     server_name = db.Column(db.String,nullable=False)
     logon_time = db.Column(db.TIMESTAMP(timezone=True), server_default=func.now())
     logoff_time = db.Column(db.TIMESTAMP(timezone=True))
+    
+    def to_dict(self, time_format='%Y-%m-%d %H:%M:%S'):
 
+        return {
+            'id': self.id,
+            'player_name': self.player_name,
+            'character_name': self.character_name,
+            'ip_addr': self.ip_addr,
+            'cd_key': self.cd_key,
+            'docker_name': self.docker_name,
+            'server_name': self.server_name,
+            'logon_time': self.logon_time,
+            'logoff_time': self.logoff_time,
+        }
 
 class ServerCmds(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)

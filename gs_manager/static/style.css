@@ -165,3 +165,12 @@ input[type=submit] {
 .file_table td{
   min-width: 20px;
 }
+
+.player_hist {
+  font-size: x-small;
+  margin-bottom: 0;
+}
+.data {
+  font-size: x-small;
+  margin-bottom: 0;
+}

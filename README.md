@@ -8,6 +8,7 @@ This is the source code for an open-source project for managing NeverWinter Nigh
   * View actively logged in players
   * Very basic character editor (not stable)
   * Restful API
+  * Viewing Player login history for servers with advanced filtering
 * Features under development
   * Support for emailing/texting distribution lists when players log on
     * Will be configurable and will allow for distribution lists
@@ -48,4 +49,7 @@ You can browser up and down directories by clicking on the links and the ".." le
 ![Manager Server Modules](https://github.com/svolpe/gs-manager/blob/main/docs/screenshots/file_manager_character.png)
 #### Logged in Users
 ![List Users](https://github.com/svolpe/gs-manager/blob/main/docs/screenshots/players.png)
+#### Player Login History
+![Player Login History](https://github.com/svolpe/gs-manager/blob/main/docs/screenshots/player_history.png
+)
 

@@ -1,19 +1,23 @@
 {% extends 'base.html' %}
 
-  {% block title %}Servers{% endblock %}
+{% block header %}
+  <h1>{% block title %}Servers{% endblock %}</h1>
+  {% if g.user %}
     <a class="action" href="{{ url_for('server_config.create') }}">New</a>
+  {% endif %}
+{% endblock %}
 
 {% block content %}
   <meta http-equiv="refresh" content="2" />
-  <center><a class="action" href="{{ url_for('server_config.create') }}">Create New Server</a></center>
   {% for post in posts %}
     <article class="post">
       <header>
         <div>
-          <h1>{{ post['server_name'] }}</h1>
+          <div class=title_txt>{{ post['server_name'] }}</div>
           <div class="about">Server Name {{ post['module_name'] }} on port {{ post['port'] }}</div>
 
         </div>
+        {% if g.user %}
           <a class="action" href="{{ url_for('server_config.delete', id=post['id']) }}">Delete</a>
           {% if server_status == "down" %}
             <a class="status_error"> Backend Down </a>
@@ -33,6 +37,10 @@
           {% else %}
             <a class="status_stopped"> Manually Stopped </a>
           {% endif %}
+        {% endif %}
+        {% if post['is_active'] == 0 %}
+          <a></a>
+        {% elif g.user %}
           {% if post['status'] == "running"%}
             <a class="action" href="{{ url_for('server_config.stop', id=post['id']) }}">stop</a>
           {% else %}
@@ -40,6 +48,7 @@
           {% endif %}
           <a class="action" href="{{ url_for('server_config.copy', id=post['id']) }}">Copy</a>
           <a class="action" href="{{ url_for('server_config.update', id=post['id']) }}">Edit</a>
+        {% endif %}
       </header>
     </article>
     {% if not loop.last %}

@@ -11,8 +11,9 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
   </head>
-  <nav>
-    <h3>GS Manager</h3>
+  <h1>GS Manager</h1>
+  <nav class="navbar" >
+    
     <ul>
       {% if g.user %}
         <li><span>{{ g.user['username'] }}</span></li>

@@ -22,8 +22,41 @@ This is the source code for an open-source project for managing NeverWinter Nigh
   * Support for managing other game servers
   * Support for managing/running nwn servers outside of docker 
   
-## Installation
-* Under construction
+## Installation (Under Construction)
+* Install required software in a Linux environment: Docker and Python
+  * NOTE: If someone wants to run it in Windows it should not be hard to get working and I would be more than willing to help out!
+* Download and extract gs-manager 
+* Install python required packages by running the following command in the root directory of gs-manager:
+  ```
+  pip install -r requirements.txt
+  ```
+* make a directory for server files, I will refer to that directory as DOCKER_STORAGE in the rest of this README
+* Configure front-end (web pages)
+  * Copy gs_manger/config_example.py to the gs_manager/config.py
+  * Edit gs_manager/config.py and change GS_PATH_STORAGE to point to your DOCKER_STORAGE location
+* Configure backend (docker and game server manager)
+  * Install NWN docker image by running the following command:
+    ```
+    docker pull nwnxee/unified
+    ```  
+ * Copy backends/nwnee/config_example.py to the backends/nwnee/config.py
+ * Most likely you will NOT need to edit this config.py unless you are also using mysql for a persistant world.
+ * Executing the program(s)
+   * Start the front-end first
+     * If your using a python virtual environment make sure to start it first (https://docs.python.org/3/library/venv.html)
+     * To start web front-end it is recommended to use a webserver like gunicorn and run a command simular to this one:
+       ```
+       gunicorn -b 0.0.0.0:5000 -w 4 'gs_manager:create_app()'
+       ```
+     * For debub purposes and test purposes you can use the flask web server
+       ```
+       flask --app gs_manager run
+       ```
+   * Start the backend
+     ```
+     PYTHONPATH="$(pwd)" python backends/nwnee/docker/nwnee.py
+     ```
+  
 ## Screenshots
 ### Server Management
 #### List/Control active servers

@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block header %}
-  <h1>{% block title %}Server config for {{ server_cfg['server_name'] }}{% endblock %}</h1>
+  {% block title %}Server config for {{ server_cfg['server_name'] }}{% endblock %}
 {% endblock %}
 
 {% block content %}

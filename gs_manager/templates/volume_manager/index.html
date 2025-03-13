@@ -1,13 +1,10 @@
 {% extends 'base.html' %}
 
-{% block header %}
-  <h1>{% block title %}Volume Manager Groups{% endblock %}</h1>
-  {% if g.user %}
-    <a class="action" href="{{ url_for('volume_manager.create') }}">New Group</a>
-  {% endif %}
-{% endblock %}
+  {% block title %}Volume Manager Groups{% endblock %}
 
 {% block content %}
+<center><a class="action" href="{{ url_for('volume_manager.create') }}">Create New Group</a></center>
+
   {% for volume in volumes %}
     <article class="post">
       <header>

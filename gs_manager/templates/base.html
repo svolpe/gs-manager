@@ -19,12 +19,11 @@
         <li><a href="{{ url_for('file_manager.index') }}">File Manager</a></li>
         <li><a href="{{ url_for('server_config.index') }}">Server Configs</a></li>
         <li><a href="{{ url_for('players.index') }}">Active Players</a></li>
-          <li><a href="{{ url_for('player_history.index') }}">Player History</a></li>
+        <li><a href="{{ url_for('player_history.index') }}">Player History</a></li>
         <li><a href="{{ url_for('volume_manager.index') }}">Volumes</a></li>
         <li><a href="{{ url_for('auth.logout') }}">Log Out</a></li>
         <li><a href="{{ url_for('auth.register') }}">Reg</a></li>
       {% else %}
-        <li><a href="{{ url_for('auth.register') }}">Reg</a></li>
         <li><a href="{{ url_for('auth.login') }}">Log In</a></li>
       {% endif %}
     </ul>

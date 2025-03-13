@@ -18,12 +18,12 @@ class ProductionConfig(Config):
     """Production config."""
     FLASK_ENV = "production"
     FLASK_DEBUG = False
-    SQLALCHEMY_DATABASE_URI = "sqlite:///var/tmp/gs_manager/gsmanager.sqlite"
+    SQLALCHEMY_DATABASE_URI = "sqlite:///gsmanager.sqlite"
     GS_PATH_STORAGE = '/var/tmp/gs-manager/docker_storage'
 
 class DevelopmentConfig(Config):
     """Development config."""
     FLASK_ENV = "development"
     FLASK_DEBUG = True
-    SQLALCHEMY_DATABASE_URI = "sqlite:///var/tmp/gs_manager/gsmanager.sqlite"
+    SQLALCHEMY_DATABASE_URI = "sqlite:///gsmanager.sqlite"
     GS_PATH_STORAGE = '/var/tmp/gs-manager/docker_storage'

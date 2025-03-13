@@ -73,7 +73,11 @@
     var table = new DataTable('#data',{
       ajax: '/player_history/data',
       layout: {
-        top1: 'searchPanes'
+          top: { 
+              searchPanes: {
+              viewTotal: true
+          }
+        }
       },
       columns: [
         {data: 'player_name', orderable: true, searchable: true},
@@ -101,7 +105,7 @@
   
       ],
     });
-
+    
     // Refilter the table
     document.querySelectorAll('#min, #max').forEach((el) => {
         el.addEventListener('change', () => table.draw());

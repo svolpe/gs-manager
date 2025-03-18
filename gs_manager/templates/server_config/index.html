@@ -7,7 +7,7 @@
   <table id="t_serv_cfg" class="display">
     <thead>
         <tr>
-            <th>Id</th>
+            <th>ID</th>
             <th>Server</th>
             <th>Delete</th>
             <th>Status</th>
@@ -99,6 +99,9 @@
       socket.emit('do_action', {[cmd]: data});
       if (cmd == "Stop" || cmd == "Start"){
         e.currentTarget.disabled = true;
+      }else if (cmd == "Edit"){
+        
+        window.location.href = 'http://' + document.domain + ':' + location.port + "/"+data.id+"/server_config";
       }
     });
   });//End Ready function

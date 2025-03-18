@@ -83,7 +83,7 @@ def get_server_diffs(cfgs1, cfgs2):
         
     
 def get_server_info():
-    query = ServerConfigs.query.join(ServerStatus, ServerStatus.server_cfg_id == ServerConfigs.id) \
+    query = ServerConfigs.query.join(ServerStatus, ServerStatus.server_cfg_id == ServerConfigs.id, isouter=True) \
                         .with_entities(ServerConfigs.server_name, ServerConfigs.port, ServerConfigs.id, ServerConfigs.module_name, ServerStatus.status,
         ServerConfigs.is_active).all()
 
@@ -133,16 +133,15 @@ def cfg_data():
     query = ServerConfigs.query.join(ServerStatus, ServerStatus.server_cfg_id == ServerConfigs.id).with_entities(ServerConfigs.server_name, ServerConfigs.port, ServerConfigs.id, ServerConfigs.module_name, ServerStatus.status,ServerConfigs.is_active).all()
     statuses = get_server_info()
     rows = []
-    for cfg in query:
-        qdata = cfg._asdict()
+    for cfg in statuses.values():
         rows.append({
-            'id':cfg.id,
-            'server': cfg.server_name,
-            'port': cfg.port,
-            'module': cfg.module_name,
-            'severity': statuses[cfg.id]['severity'],
-            'status':  statuses[cfg.id]['status'],
-            'action':  statuses[cfg.id]['action']
+            'id':cfg['id'],
+            'server': cfg['server_name'],
+            'port': cfg['port'],
+            'module': cfg['module_name'],
+            'severity': statuses[cfg['id']]['severity'],
+            'status':  statuses[cfg['id']]['status'],
+            'action':  statuses[cfg['id']]['action']
         })
     data = {'data': rows}
     return data
@@ -164,7 +163,7 @@ def do_action(action):
 @socketio.on("get_statuses")
 def get_statuses():
     old_stats = get_server_info()
-    
+
     # Send the current status to the client
     sid = request.sid
     emit('status_changed', {'data': old_stats}, room=sid)

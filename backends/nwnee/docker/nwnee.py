@@ -31,6 +31,10 @@ if __name__ == "__main__":
     print(f"Time to initialize docker images: {round(time.time() - t1, 1)}s")
 
     get_users_timer_start = time.time()
+    
+    #flush old commands that were not yet run
+    db.flush_unexecuted_cmds()
+
     while True:
         db.update_heartbeat('backend_nwn')
         # Get all commands that have not yet been run
@@ -41,10 +45,15 @@ if __name__ == "__main__":
             if exec_cmd == 'stop':
                 server_id = cmd['cmd_args']
                 db.set_status('stopping', server_id)
-                servers[server_id].stop()
+                try:
+                    servers[server_id].stop()
+                except:
+                    print("ERROR: Tried to stop a server that is not running")
+                    db.set_cmd_executed(cmd_id, -1)
                 servers[server_id].remove_container()
                 del servers[server_id]
                 db.set_cmd_executed(cmd_id)
+                db.set_status('stopped', server_id)
 
             if exec_cmd == 'start':
                 server_id = cmd['cmd_args']
@@ -62,12 +71,6 @@ if __name__ == "__main__":
         active_users = dict()
 
         # Send server statuses
-        # Remove all old statuses that are no longer used
-        keys = list(servers.keys())
-        qs = ", ".join("?" * len(keys))
-        query = f"delete from server_status where server_cfg_id not in ({qs})"
-        db.sql_update(query, keys)
-
         for key in servers.keys():
             server = servers[key]
             # Get Status and set it all to lower case just in case.

@@ -12,12 +12,19 @@ def update_heartbeat(component):
     con.commit()
     con.close()
 
-
-def set_cmd_executed(cmd_id):
+def flush_unexecuted_cmds():
     con = sqlite3.connect(DBPATH)
     cur = con.cursor()
-    query = "update server_cmds set cmd_executed_time = DATETIME('now','localtime') where id = ?"
-    cur.execute(query, (cmd_id,))
+    query = "UPDATE server_cmds set cmd_executed_time = 0 where cmd_executed_time is NULL"
+    cur.execute(query,)
+    con.commit()
+    con.close()
+
+def set_cmd_executed(cmd_id, cmd_return=1):
+    con = sqlite3.connect(DBPATH)
+    cur = con.cursor()
+    query = "update server_cmds set cmd_executed_time = DATETIME('now','localtime'), cmd_return=? where id = ?"
+    cur.execute(query, (cmd_return, cmd_id))
     con.commit()
     con.close()
 
@@ -101,6 +108,16 @@ def set_status(status, cfg_id):
         save_status = "error"
     else:
         save_status = "error"
+    con = sqlite3.connect(DBPATH)
+    
+    query = "SELECT EXISTS(SELECT 1 FROM server_status WHERE server_cfg_id=?) limit 1"
+    data = con.execute(query, (cfg_id,)).fetchone()
+    if data == (1,):
+        query = "update server_status set status=? where server_cfg_id=?"
+    else:
+        query = "insert into server_status(status, server_cfg_id) VALUES(?, ?)"
+    
+    con.execute(query, (status, cfg_id))
+    con.commit()
+    con.close()
 
-    query = f"REPLACE INTO server_status(server_cfg_id, status) VALUES (?, ?)"
-    sql_update(query, [cfg_id, save_status])

@@ -6,11 +6,17 @@ from .models.users import User
 from .models.blog import Post
 from .models.server_nwn import (ServerConfigs, ServerCmds, PcActiveLog, VolumesInfo, VolumesDirs, ServerVolumes,
                                 ServerStatus)
+from flask import Flask, render_template
+from flask_socketio import SocketIO
 
+socketio = SocketIO()
 
 def create_app(test_config=None):
     # create and configure the app
     app = Flask(__name__, instance_relative_config=True)
+    
+    #Initialize socketio
+    socketio.init_app(app)
 
     # load the instance config, if it exists, when not testing
     # TODO: Look into if this is the correct way to load a config file

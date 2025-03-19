@@ -46,7 +46,7 @@ def is_server_ok():
     ''''Checks if the backend server is updating the heartbeat'''  
     heartbeat = SystemWatchdog.query.filter_by(component="backend_nwn").first()
     cur_datetime = datetime.datetime.now()
-    if not heartbeat or (cur_datetime - heartbeat.heart_beat).seconds > 10:
+    if not heartbeat or (cur_datetime - heartbeat.heart_beat).seconds > 60:
         return False
     else:
         return True
@@ -92,20 +92,18 @@ def get_server_info():
     for q in query:
         if not is_server_ok():
             update = {'severity':'error', 'status':'server down', 'action':'none'}
-        elif q.status == None and q.is_active:
-            update = {'severity':'warn', 'status':'manually stopped', 'action':'start'}
-        elif not q.is_active and q.status != "running":
-            update={'severity':'none', 'status':'not active', 'action':'start'}
         elif q.status == "running":
             update={'severity':'good', 'status':q.status, 'action':'stop'}
-        elif q.status in "stopping loading running":
+        elif q.status in "starting stopping loading running":
             update={'severity':'warn', 'status':q.status, 'action':'none'}
         elif q.status == "stopped":
-            update={'severity':'warn', 'status':q.status, 'action':'start'}
-        elif q.status == "running":
-            update={'severity':'good', 'status':q.status, 'action':'stop'}
+            if q.is_active:
+                update={'severity':'error', 'status':q.status, 'action':'start'}
+            else:
+                update={'severity':'none', 'status':'not activated', 'action':'start'}   
         else:
             update={'severity':'error', 'status':q.status, 'action':'start'}
+        
         status[q.id] = q._asdict()
         status[q.id].update(update)
     return status  

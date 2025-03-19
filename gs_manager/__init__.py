@@ -8,19 +8,25 @@ from .models.server_nwn import (ServerConfigs, ServerCmds, PcActiveLog, VolumesI
                                 ServerStatus)
 from flask import Flask, render_template
 from flask_socketio import SocketIO
+from . import config
 
+#Select Config to use
+if config.TESTING:
+    active_cfg = config.DevelopmentConfig
+else:
+    active_cfg = config.ProductionConfig
+    
 socketio = SocketIO()
 
 def create_app(test_config=None):
     # create and configure the app
     app = Flask(__name__, instance_relative_config=True)
+
+    #Load config
+    app.config.from_object(active_cfg)
     
     #Initialize socketio
-    socketio.init_app(app)
-
-    # load the instance config, if it exists, when not testing
-    # TODO: Look into if this is the correct way to load a config file
-    app.config.from_object("gs_manager.config.DevelopmentConfig")
+    socketio.init_app(app, cors_allowed_origins=app.config["CORS_ALLOWED_ORIGINS"], async_mode='eventlet')
 
     db.init_app(app)
     migrate.init_app(app, db)

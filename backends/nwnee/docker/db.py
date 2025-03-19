@@ -92,6 +92,8 @@ def get_volumes(cfg_id):
 
     return volumes_data
 
+def get_new_commands():
+    return sql_data_to_list_of_dicts("SELECT * FROM server_cmds where cmd_executed_time is NULL")
 
 def set_status(status, cfg_id):
     status = status.lower()

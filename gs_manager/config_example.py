@@ -20,6 +20,7 @@ class ProductionConfig(Config):
     FLASK_DEBUG = False
     SQLALCHEMY_DATABASE_URI = "sqlite:///gsmanager.sqlite"
     GS_PATH_STORAGE = '/var/tmp/gs-manager/docker_storage'
+    SQLALCHEMY_POOL_SIZE = 50
 
 class DevelopmentConfig(Config):
     """Development config."""
@@ -27,3 +28,4 @@ class DevelopmentConfig(Config):
     FLASK_DEBUG = True
     SQLALCHEMY_DATABASE_URI = "sqlite:///gsmanager.sqlite"
     GS_PATH_STORAGE = '/var/tmp/gs-manager/docker_storage'
+    SQLALCHEMY_POOL_SIZE = 50

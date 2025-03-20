@@ -81,7 +81,6 @@ def get_server_diffs(cfgs1, cfgs2):
             "changed": diff
         }
         
-    
 def get_server_info():
     query = ServerConfigs.query.join(ServerStatus, ServerStatus.server_cfg_id == ServerConfigs.id, isouter=True) \
                         .with_entities(ServerConfigs.server_name, ServerConfigs.port, ServerConfigs.id, ServerConfigs.module_name, ServerStatus.status,
@@ -92,6 +91,8 @@ def get_server_info():
     for q in query:
         if not is_server_ok():
             update = {'severity':'error', 'status':'server down', 'action':'none'}
+        elif q.status == None:
+            update={'severity':'none', 'status':'not activated', 'action':'start'}
         elif q.status == "running":
             update={'severity':'good', 'status':q.status, 'action':'stop'}
         elif q.status in "starting stopping loading running":
@@ -143,6 +144,10 @@ def cfg_data():
         })
     data = {'data': rows}
     return data
+
+@socketio.on('connect')
+def handle_connect():
+    print('Client connected')
 
 @socketio.on("do_action")
 def do_action(action):

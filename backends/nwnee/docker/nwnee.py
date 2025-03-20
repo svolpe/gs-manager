@@ -62,6 +62,8 @@ if __name__ == "__main__":
         # Get all commands that have not yet been run
         server_cmds = db.get_new_commands()
         for cmd in server_cmds:
+            #Starting and stopping docker images can take some time so update the wdt
+            db.update_heartbeat('backend_nwn')
             cmd_id = cmd['id']
             exec_cmd = cmd['cmd']
             if exec_cmd == 'stop':

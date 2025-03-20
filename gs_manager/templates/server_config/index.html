@@ -20,7 +20,6 @@
 
 {% block scripts %}
 <script>
-  let socket;
   $(document).ready(function(){
     var table = new DataTable('#t_serv_cfg',{
       "ajax": "/cfg_data",
@@ -68,9 +67,45 @@
         },
       ],
     }); //End DataTables
-
+/*
     socket = io.connect('http://' + document.domain + ':' + location.port);
 
+
+*/
+    table.on('click', 'td.editor-delete button', function (e) {
+      let data = table.row(e.target.closest('tr')).data();
+      console.log("delete");
+      sendMessage('do_action', {'delete': data});
+      e.currentTarget.disabled = true
+    });  
+    
+    table.on('click', 'td.editor-action button', function (e) {
+      let data = table.row(e.target.closest('tr')).data();
+      let cmd = e.currentTarget.innerHTML
+      console.log(cmd + ": " + data);
+      sendMessage('do_action', {[cmd]: data});
+      if (cmd == "Stop" || cmd == "Start"){
+        e.currentTarget.disabled = true;
+      }else if (cmd == "Edit"){
+        
+        window.location.href = 'http://' + document.domain + ':' + location.port + "/"+data.id+"/server_config";
+      }
+    });
+
+    var socket = io();
+    socket.on('connect', function() {
+        console.log('Connected to server');
+    });
+    socket.on('message', function(msg) {
+        console.log('Message received: ' + msg);
+    });
+    socket.on('disconnect', function() {
+        console.log('Disconnected from server');
+    });
+    function sendMessage(news_event, msg) {
+        //var msg = document.getElementById('message').value;
+        socket.emit(news_event, msg);
+    }
     socket.on("connect", () => {
       console.log("connected");
       socket.emit('get_statuses');
@@ -84,26 +119,8 @@
     socket.on("disconnect", () => {
       console.log("disconnected");
     });
+});//End Ready function
 
-    table.on('click', 'td.editor-delete button', function (e) {
-      let data = table.row(e.target.closest('tr')).data();
-      console.log("delete");
-      socket.emit('do_action', {'delete': data});
-      e.currentTarget.disabled = true
-    });  
-    
-    table.on('click', 'td.editor-action button', function (e) {
-      let data = table.row(e.target.closest('tr')).data();
-      let cmd = e.currentTarget.innerHTML
-      console.log(cmd + ": " + data);
-      socket.emit('do_action', {[cmd]: data});
-      if (cmd == "Stop" || cmd == "Start"){
-        e.currentTarget.disabled = true;
-      }else if (cmd == "Edit"){
-        
-        window.location.href = 'http://' + document.domain + ':' + location.port + "/"+data.id+"/server_config";
-      }
-    });
-  });//End Ready function
+
 </script>
 {% endblock %}

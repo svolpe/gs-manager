@@ -148,8 +148,10 @@ class NwnServer:
                         return data_buf[start_index:]
                     elif mod_loaded_flt in data_buf:
                         #If mod_loader filter is present, resend the command
-                        self._socket.send(cmd.encode())
-                        
+                        try:
+                            self._socket.send(cmd.encode())
+                        except:
+                            continue
                 # In case the start filter string or the EOF is not detected, this provides a timeout.
                 if time.time() - start_time > timeout:
                     print(f"cmd time exceeded timeout time of: {timeout}s with retries {retry_cnt} remaining")

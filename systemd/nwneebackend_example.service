@@ -1,0 +1,13 @@
+[Unit]
+Description=NWNee backend game manager application
+After=gsmanager.target
+
+[Service]
+User=USER_TO_RUN_AS
+WorkingDirectory=INSTALLED_DIR/gs-manager
+Environment="PYTHONPATH=INSTALLED_DIR/gs-manager"
+ExecStart=INSTALLED_DIR/gs-manager/.venv/bin/python backends/nwnee/docker/nwnee.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

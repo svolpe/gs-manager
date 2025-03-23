@@ -128,8 +128,6 @@ def index():
         'server_config/index.html', posts=query, server_status=server_status)
 @sc.route('/cfg_data')
 def cfg_data():
-
-    query = ServerConfigs.query.join(ServerStatus, ServerStatus.server_cfg_id == ServerConfigs.id).with_entities(ServerConfigs.server_name, ServerConfigs.port, ServerConfigs.id, ServerConfigs.module_name, ServerStatus.status,ServerConfigs.is_active).all()
     statuses = get_server_info()
     rows = []
     for cfg in statuses.values():
@@ -145,11 +143,11 @@ def cfg_data():
     data = {'data': rows}
     return data
 
-@socketio.on('connect')
+@socketio.on('connect', namespace='/server_cfgs')
 def handle_connect():
     print('Client connected')
 
-@socketio.on("do_action")
+@socketio.on("do_action", namespace='/server_cfgs')
 def do_action(action):
     cmd = list(action.keys())[0]
     id = action[cmd]["id"]
@@ -163,7 +161,7 @@ def do_action(action):
         send_cmd(cmd, 0, str(id))
 
 
-@socketio.on("get_statuses")
+@socketio.on("get_statuses", namespace='/server_cfgs')
 def get_statuses():
     old_stats = get_server_info()
 
@@ -177,15 +175,6 @@ def get_statuses():
             emit('status_changed', {'data': cur_stats}, room=sid)
             old_stats = cur_stats
 
-        socketio.sleep(1)
-
-@socketio.on("my_event")
-def checkping():
-    for x in range(5):
-        cmd = 'ping -c 1 8.8.8.8|head -2|tail -1'
-        listing1 = subprocess.run(cmd,stdout=subprocess.PIPE,text=True,shell=True)
-        sid = request.sid
-        emit('server', {"data1":x, "data":listing1.stdout}, room=sid)
         socketio.sleep(1)
 
 @sc.route('/create', methods=('GET', 'POST'))

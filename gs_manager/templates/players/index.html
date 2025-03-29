@@ -1,23 +1,97 @@
 {% extends 'base.html' %}
 
-{% block header %}
-  {% block title %}Logged in users{% endblock %}
-
-{% endblock %}
+{% block title %}Servers{% endblock %}
 
 {% block content %}
-  <meta http-equiv="refresh" content="2" />
-  {% for post in posts %}
-    <article class="post">
-      <header>
-        <div>
-          <h1>{{ post['player_name'] }}</h1>
-          <div class="about">Character {{ post['character_name'] }} logged onto {{ post['server_name'] }} on {{ post['logon_time'].strftime('%Y-%m-%d at %I:%M:%S %p') }}</div>
-        </div>
-      </header>
-    </article>
-    {% if not loop.last %}
-      <hr>
-    {% endif %}
-  {% endfor %}
+  <a href="{{ url_for('server_config.create') }}">New</a>
+  <table id="t_serv_cfg" class="display">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Character Name</th>
+            <th>Player Name</th>
+            <th>Server Name</th>
+            <th>Log On Time</th>
+        </tr>
+    </thead>
+</table>
+  </table>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  $(document).ready(function(){
+    var table = new DataTable('#t_serv_cfg',{
+      "ajax": "/player_data",
+      columnDefs: [
+      {type:  'date', targets: 4, render: DataTable.render.datetime('ddd, DD MMM YYYY h:mm:ss a', 'en')},
+      {
+          target: 0,
+          visible: false
+      }
+      ],
+      columns: [
+        { data: "id"},
+        { data: "player_name"},
+        { data: "character_name"},
+        { data: "server_name"},
+        { data: "logon_time"},
+      ],
+    }); //End DataTables
+/*
+    socket = io.connect('http://' + document.domain + ':' + location.port);
+
+
+*/
+    table.on('click', 'td.editor-delete button', function (e) {
+      let data = table.row(e.target.closest('tr')).data();
+      console.log("delete");
+      sendMessage('do_action', {'delete': data});
+      e.currentTarget.disabled = true
+    });  
+    
+    table.on('click', 'td.editor-action button', function (e) {
+      let data = table.row(e.target.closest('tr')).data();
+      let cmd = e.currentTarget.innerHTML
+      console.log(cmd + ": " + data);
+      sendMessage('do_action', {[cmd]: data});
+      if (cmd == "Stop" || cmd == "Start"){
+        e.currentTarget.disabled = true;
+      }else if (cmd == "Edit"){
+        
+        window.location.href = 'http://' + document.domain + ':' + location.port + "/"+data.id+"/server_config";
+      }
+    });
+
+    var socket = io('http://' + document.domain + ':' + location.port + '/players_info');
+    socket.on('connect', function() {
+        console.log('Connected to server');
+    });
+    socket.on('message', function(msg) {
+        console.log('Message received: ' + msg);
+    });
+    socket.on('disconnect', function() {
+        console.log('Disconnected from server');
+    });
+    function sendMessage(news_event, msg) {
+        //var msg = document.getElementById('message').value;
+        socket.emit(news_event, msg);
+    }
+    socket.on("connect", () => {
+      console.log("connected");
+      socket.emit('get_statuses');
+    });
+    
+    socket.on("status_changed", function(data){
+      console.log("status_changed");
+      table.ajax.reload();
+    });
+
+    socket.on("disconnect", () => {
+      console.log("disconnected");
+    });
+});//End Ready function
+
+
+</script>
 {% endblock %}

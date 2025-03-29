@@ -1,0 +1,12 @@
+[Unit]
+Description=Game Server Manager web dev server application
+After=network.target
+
+[Service]
+User=v_malarik
+WorkingDirectory=INSTALLED_DIR
+ExecStart=INSTALLED_DIR/gs-manager/.venv/bin/gunicorn --worker-class eventlet -b 0.0.0.0:5001 -w 4 'gs_manager:create_app()'
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

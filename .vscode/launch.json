@@ -28,7 +28,8 @@
                 "run",
             ],
             "jinja": true,
-            "justMyCode": true
+            "justMyCode": true,
+            "gevent":true
         },
         {
             "name": "Python Debugger: NWN Server",

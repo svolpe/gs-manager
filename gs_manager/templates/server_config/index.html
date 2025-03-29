@@ -1,59 +1,126 @@
 {% extends 'base.html' %}
 
-{% block header %}
-  <h1>{% block title %}Servers{% endblock %}</h1>
-  {% if g.user %}
-    <a class="action" href="{{ url_for('server_config.create') }}">New</a>
-  {% endif %}
-{% endblock %}
+{% block title %}Servers{% endblock %}
 
 {% block content %}
-  <meta http-equiv="refresh" content="2" />
-  {% for post in posts %}
-    <article class="post">
-      <header>
-        <div>
-          <div class=title_txt>{{ post['server_name'] }}</div>
-          <div class="about">Server Name {{ post['module_name'] }} on port {{ post['port'] }}</div>
-
-        </div>
-        {% if g.user %}
-          <a class="action" href="{{ url_for('server_config.delete', id=post['id']) }}">Delete</a>
-          {% if server_status == "down" %}
-            <a class="status_error"> Backend Down </a>
-          {% elif post['is_active'] == 0 %}
-            <a></a>
-            <a class="status_not_active"> Not Active </a>
-          {% elif post['status'] == "running" %}
-            <a class="status_good"> {{ post['status'] }} </a>
-          {% elif post['status'] == "loading" %}
-            <a class="status_loading"> {{ post['status'] }} </a>
-          {% elif post['status'] == "stopping" %}
-            <a class="status_stopping"> {{ post['status'] }} </a>
-          {% elif post['status'] == "stopped" %}
-            <a class="status_stopped"> {{ post['status'] }} </a>
-          {% elif post['status'] == "error" %}
-            <a class="status_error"> {{ post['status'] }} </a>
-          {% else %}
-            <a class="status_stopped"> Manually Stopped </a>
-          {% endif %}
-        {% endif %}
-        {% if post['is_active'] == 0 %}
-          <a></a>
-        {% elif g.user %}
-          {% if post['status'] == "running"%}
-            <a class="action" href="{{ url_for('server_config.stop', id=post['id']) }}">stop</a>
-          {% else %}
-            <a class="action" href="{{ url_for('server_config.start', id=post['id']) }}">Start</a>
-          {% endif %}
-          <a class="action" href="{{ url_for('server_config.copy', id=post['id']) }}">Copy</a>
-          <a class="action" href="{{ url_for('server_config.update', id=post['id']) }}">Edit</a>
-        {% endif %}
-      </header>
-    </article>
-    {% if not loop.last %}
-      <hr>
-    {% endif %}
-  {% endfor %}
+  <a href="{{ url_for('server_config.create') }}">New</a>
+  <table id="t_serv_cfg" class="display">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Server</th>
+            <th>Delete</th>
+            <th>Status</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+</table>
+  </table>
 {% endblock %}
 
+{% block scripts %}
+<script>
+  $(document).ready(function(){
+    var table = new DataTable('#t_serv_cfg',{
+      "ajax": "/cfg_data",
+      columnDefs: [
+        {
+          render: function ( data, type, row ) {
+            return "<div class='title_txt'>"+row.server+"</div><br>"+"<div class='about'>"+row.module+" on port "+row.port+"</div>";
+          },
+          targets: [1]
+        },
+        {
+          render: function ( data, type, row ) {
+            return "<div class='status_"+row.severity +"'>"+row.status+"</div>";
+          },
+          targets: [3]
+        },
+        {
+          target: 0,
+          visible: false
+      }
+      ],
+      columns: [
+        { data: "id"},
+        { data: "server"},
+        {
+          data: null,
+          className: 'dt-center editor-delete',
+          defaultContent: '<button>Delete</button>',
+          orderable: false
+      },
+        { data: "status" },
+        {
+          className: 'dt-center editor-action',
+          render: function (full, type, data, meta){
+            let button = data.action
+            button = String(button[0]).toUpperCase()  + String(button).slice(1);
+            if (button == "None"){
+              //let row = table.row(meta.row)
+              //action = row.data().action
+              return "<button type='button' disabled>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</button><button>Edit</button><button>Copy</button>";
+            }
+            else
+              return "<button type='button'>"+button+"</button><button>Edit</button><button>Copy</button>";
+          }
+        },
+      ],
+    }); //End DataTables
+/*
+    socket = io.connect('http://' + document.domain + ':' + location.port);
+
+
+*/
+    table.on('click', 'td.editor-delete button', function (e) {
+      let data = table.row(e.target.closest('tr')).data();
+      console.log("delete");
+      sendMessage('do_action', {'delete': data});
+      e.currentTarget.disabled = true
+    });  
+    
+    table.on('click', 'td.editor-action button', function (e) {
+      let data = table.row(e.target.closest('tr')).data();
+      let cmd = e.currentTarget.innerHTML
+      console.log(cmd + ": " + data);
+      sendMessage('do_action', {[cmd]: data});
+      if (cmd == "Stop" || cmd == "Start"){
+        e.currentTarget.disabled = true;
+      }else if (cmd == "Edit"){
+        
+        window.location.href = 'http://' + document.domain + ':' + location.port + "/"+data.id+"/server_config";
+      }
+    });
+
+    var socket = io('http://' + document.domain + ':' + location.port + '/server_cfgs');
+    socket.on('connect', function() {
+        console.log('Connected to server');
+    });
+    socket.on('message', function(msg) {
+        console.log('Message received: ' + msg);
+    });
+    socket.on('disconnect', function() {
+        console.log('Disconnected from server');
+    });
+    function sendMessage(news_event, msg) {
+        //var msg = document.getElementById('message').value;
+        socket.emit(news_event, msg);
+    }
+    socket.on("connect", () => {
+      console.log("connected");
+      socket.emit('get_statuses');
+    });
+    
+    socket.on("status_changed", function(data){
+      console.log("status_changed");
+      table.ajax.reload();
+    });
+
+    socket.on("disconnect", () => {
+      console.log("disconnected");
+    });
+});//End Ready function
+
+
+</script>
+{% endblock %}

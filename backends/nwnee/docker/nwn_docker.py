@@ -122,6 +122,9 @@ class NwnServer:
         This method sends a command to the server and returns all the data starting at the start_flt string to the
         EOF.
         """
+        # This filter is to test if the module just finished loading since it ignores commands until after that!
+        
+        mod_loaded_flt = "Module loaded".encode()
         # This sets the retry count
         while retry_cnt > 0:
             start_time = time.time()
@@ -143,7 +146,12 @@ class NwnServer:
                     if start_flt_b in data_buf:
                         start_index = data_buf.find(start_flt_b)
                         return data_buf[start_index:]
-
+                    elif mod_loaded_flt in data_buf:
+                        #If mod_loader filter is present, resend the command
+                        try:
+                            self._socket.send(cmd.encode())
+                        except:
+                            continue
                 # In case the start filter string or the EOF is not detected, this provides a timeout.
                 if time.time() - start_time > timeout:
                     print(f"cmd time exceeded timeout time of: {timeout}s with retries {retry_cnt} remaining")

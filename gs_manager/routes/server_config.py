@@ -9,12 +9,13 @@ from ..extensions import db, clone_model
 from ..models.server_nwn import (ServerConfigs, ServerCmds, VolumesInfo, ServerVolumes, VolumesDirs,
                                 ServerStatus, SystemWatchdog)
 
-from flask_wtf import FlaskForm
-from flask_wtf import FlaskForm
-from wtforms import StringField, FieldList, SelectField, RadioField, IntegerField, SelectMultipleField, FormField
-from wtforms.validators import InputRequired, NumberRange
+from .server_config_forms import ServerConfiguration, ServerConfigDynamic
 
 import os, datetime
+from .. import socketio
+import subprocess
+from flask_socketio import emit
+from flask import request
 
 sc = Blueprint('server_config', __name__)
 
@@ -22,67 +23,159 @@ sc = Blueprint('server_config', __name__)
     list all active members. There should also be a background job tht 
 """
 
+def cfg_delete(id):
+    # Delete the server config
+    ServerConfigs.query.filter_by(id=id).delete()
 
-class ServerConfiguration(FlaskForm):
-    server_name = StringField("Server Name", validators=[InputRequired()])
-    max_players = IntegerField("Max Players", validators=[NumberRange(min=1, max=100), InputRequired()])
-    min_level = IntegerField("Min Level", validators=[NumberRange(min=1, max=40), InputRequired()])
-    max_level = IntegerField("Max Level", validators=[NumberRange(min=1, max=40), InputRequired()])
-    pause_play = SelectField("Pause And Play", choices=[(0, 'Game only can be paused by DM'),
-                                                        (1, 'Game can be paused by players')],
-                            validators=[InputRequired()])
-    pvp = SelectField("PVP", choices=[(0, 'None'), (1, 'Party'), (2, 'Full')], validators=[InputRequired()])
-    server_vault = SelectField("Server Vault", choices=[(0, 'Local Characters Only'), (1, 'Server Characters Only')],
-                            validators=[InputRequired()])
-    enforce_legal_char = RadioField('Enforce Legal Characters', choices=[(1, 'Yes'), (0, 'No'), ],
-                                    validators=[InputRequired()])
-    item_lv_restrictions = RadioField('Item Level Restrictions', choices=[(1, 'Yes'), (0, 'No')],
-                                    validators=[InputRequired()])
-    game_type = SelectField("Game Type", choices=[(0, 'Action'), (1, 'Story'), (2, 'Story Lite'), (3, 'Role Play'),
-                                                (4, 'Team'), (5, 'Melee'), (6, 'Arena'), (7, 'Social'),
-                                                (8, 'Alternative'), (9, 'PW Action'), (10, 'PW Story'), (11, 'Solo'),
-                                                (12, 'Tech Support')], validators=[InputRequired()])
-    one_party = SelectField("One Party", choices=[(0, 'Allow multiple parties'), (1, 'Only allow one party')],
-                            validators=[InputRequired()])
-    difficulty = SelectField("Difficulty", choices=[(1, 'Easy'), (2, 'Normal'), (3, 'D&D Hardcore'),
-                                                    (4, 'Very Difficult')], validators=[InputRequired()])
-    auto_save_interval = IntegerField("Auto Save Interval", validators=[InputRequired()])
-    player_pwd = StringField("Player Password")
-    dm_pwd = StringField("DM Password")
-    admin_pwd = StringField("Admin Password")
-    module_name = SelectField("Select a Module", choices=[("DockerDemo", "DockerDemo"), ], validators=[InputRequired()])
-    port = IntegerField("Port (5121)", validators=[NumberRange(min=5120, max=5170), InputRequired()])
-    public_server = SelectField("Public Server", choices=[(0, 'Not Public'), (1, 'Public')],
-                                validators=[InputRequired()])
-    reload_when_empty = RadioField('Reload When Empty', choices=[(1, 'Yes'), (0, 'No')], validators=[InputRequired()])
-    volumes = SelectMultipleField()
-    database = RadioField('Use SQL Database?', choices=[('yes', 'Yes'), ('no', 'No')], validators=[InputRequired()])
-    is_active = RadioField('Server Activate?', choices=[(1, 'Yes'), (0, 'No')], validators=[InputRequired()])
+    # Delete all volumes associated with it
+    ServerVolumes.query.filter_by(server_configs_id=id).delete()
+    db.session.commit()
+def cfg_copy(id):
+    # Clone server config
+    config_cp = ServerConfigs.query.filter_by(id=id)
+    config_cp_obj = config_cp.all()[0]
+    row_new = clone_model(config_cp_obj, server_name=config_cp_obj.server_name + "_copy", is_active=0)
 
+    # Clone server volumes
+    vol_cp = ServerVolumes.query.filter_by(server_configs_id=id).all()
+    for vol in vol_cp:
+        clone_model(vol, server_configs_id=row_new.id)
 
-class ServerConfigDynamic(FlaskForm):
-    configuration = FieldList(FormField(ServerConfiguration), min_entries=0)
+#Check if server is still up and running
+def is_server_ok():
+    ''''Checks if the backend server is updating the heartbeat'''  
+    heartbeat = SystemWatchdog.query.filter_by(component="backend_nwn").first()
+    cur_datetime = datetime.datetime.now()
+    if not heartbeat or (cur_datetime - heartbeat.heart_beat).seconds > 60:
+        return False
+    else:
+        return True
 
+def get_server_diffs(cfgs1, cfgs2):
+    cfgs1_keys = set(cfgs1.keys())
+    cfgs2_keys = set(cfgs2.keys())
+    common_keys = list(cfgs1_keys & cfgs2_keys)
+    diff = {}
+    
+    for key in common_keys:
+        if cfgs1[key] != cfgs2[key]:
+            diff[key] = {"dict1": cfgs1[key], "dict2": cfgs2[key]}
+    rkeys = list(cfgs1_keys - cfgs2_keys)
+    akeys = list(cfgs2_keys - cfgs1_keys)
+    
+    removed={}
+    added={}
+    for key in rkeys:
+        removed[key] = cfgs1[key]
+    for key in akeys:
+        added[key] = cfgs2[key]
+
+    changed = diff
+    
+    if (removed or added or changed) == {}:
+        return {}
+    else:
+        return {
+            "removed": removed,
+            "added": added,
+            "changed": diff
+        }
+        
+def get_server_info():
+    query = ServerConfigs.query.join(ServerStatus, ServerStatus.server_cfg_id == ServerConfigs.id, isouter=True) \
+                        .with_entities(ServerConfigs.server_name, ServerConfigs.port, ServerConfigs.id, ServerConfigs.module_name, ServerStatus.status,
+        ServerConfigs.is_active).all()
+
+    status = {}
+    update = {}
+    for q in query:
+        if not is_server_ok():
+            update = {'severity':'error', 'status':'server down', 'action':'none'}
+        elif q.status == None:
+            update={'severity':'none', 'status':'not activated', 'action':'start'}
+        elif q.status == "running":
+            update={'severity':'good', 'status':q.status, 'action':'stop'}
+        elif q.status in ("starting", "stopping", "loading", "running"):
+            update={'severity':'warn', 'status':q.status, 'action':'none'}
+        elif q.status == "stopped":
+            if q.is_active:
+                update={'severity':'error', 'status':q.status, 'action':'start'}
+            else:
+                update={'severity':'none', 'status':'not activated', 'action':'start'}   
+        else:
+            update={'severity':'error', 'status':q.status, 'action':'start'}
+        
+        status[q.id] = q._asdict()
+        status[q.id].update(update)
+    return status  
 
 @sc.route('/')
 def index():
+    '''TODO: replace the query with:
+        query = ServerConfigs.query.join(ServerStatus, ServerStatus.server_cfg_id == ServerConfigs.id).with_entities(ServerConfigs.server_name, ServerConfigs.port, ServerConfigs.id, ServerConfigs.module_name, ServerStatus.status,ServerConfigs.is_active).all()
+    '''
     query = db.session.query(
         ServerConfigs.server_name, ServerConfigs.port, ServerConfigs.id, ServerConfigs.module_name, ServerStatus.status,
         ServerConfigs.is_active
     ).join(ServerStatus, ServerStatus.server_cfg_id == ServerConfigs.id, isouter=True)
-
-    heartbeat = SystemWatchdog.query.filter_by(component="backend_nwn").first()
-    cur_datetime = datetime.datetime.now()
-
-    if not heartbeat:
-        server_status="down"
-    elif (cur_datetime - heartbeat.heart_beat).seconds > 10:
-        server_status="down"
+    
+    if is_server_ok():
+        server_status="up"
     else:
-        server_status = "up"
+        server_status="down"
+
     return render_template(
         'server_config/index.html', posts=query, server_status=server_status)
+@sc.route('/cfg_data')
+def cfg_data():
+    statuses = get_server_info()
+    rows = []
+    for cfg in statuses.values():
+        rows.append({
+            'id':cfg['id'],
+            'server': cfg['server_name'],
+            'port': cfg['port'],
+            'module': cfg['module_name'],
+            'severity': statuses[cfg['id']]['severity'],
+            'status':  statuses[cfg['id']]['status'],
+            'action':  statuses[cfg['id']]['action']
+        })
+    data = {'data': rows}
+    return data
 
+@socketio.on('connect', namespace='/server_cfgs')
+def handle_connect():
+    print('Client connected')
+
+@socketio.on("do_action", namespace='/server_cfgs')
+def do_action(action):
+    cmd = list(action.keys())[0]
+    id = action[cmd]["id"]
+    cmd = cmd.lower()
+    if cmd == "delete":
+        cfg_delete(id)
+    elif cmd == "copy":
+        cfg_copy(id)
+    elif cmd in ["stop", "start"]:
+        #TODO: figure out how to handle the userID instead of just using 0
+        send_cmd(cmd, 0, str(id))
+
+
+@socketio.on("get_statuses", namespace='/server_cfgs')
+def get_statuses():
+    old_stats = get_server_info()
+
+    # Send the current status to the client
+    sid = request.sid
+    emit('status_changed', {'data': old_stats}, room=sid)
+    while True:
+        cur_stats = get_server_info()
+        if cur_stats != old_stats:
+            sid = request.sid
+            emit('status_changed', {'data': cur_stats}, room=sid)
+            old_stats = cur_stats
+
+        socketio.sleep(1)
 
 @sc.route('/create', methods=('GET', 'POST'))
 def create():
@@ -229,13 +322,7 @@ def send_cmd(cmd, user_id, cmd_args):
 def delete(id):
     """This route deletes a server config from the db"""
 
-    # Delete the server config
-    ServerConfigs.query.filter_by(id=id).delete()
-
-    # Delete all volumes associated with it
-    ServerVolumes.query.filter_by(server_configs_id=id).delete()
-    db.session.commit()
-
+    cfg_delete(id)
     return redirect(url_for('server_config.index'))
 
 
@@ -243,15 +330,7 @@ def delete(id):
 def copy(id):
     """This route copies an existing server config and adds _copy to the end of the name"""
 
-    # Clone server config
-    config_cp = ServerConfigs.query.filter_by(id=id)
-    config_cp_obj = config_cp.all()[0]
-    row_new = clone_model(config_cp_obj, server_name=config_cp_obj.server_name + "_copy", is_active=0)
-
-    # Clone server volumes
-    vol_cp = ServerVolumes.query.filter_by(server_configs_id=id).all()
-    for vol in vol_cp:
-        clone_model(vol, server_configs_id=row_new.id)
+    cfg_copy(id)
 
     return redirect(url_for('server_config.index'))
 

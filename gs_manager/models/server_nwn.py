@@ -34,6 +34,7 @@ class ServerCmds(db.Model):
     cmd_args = db.Column(db.String, nullable=False)
     cmd_sent_time = db.Column(db.TIMESTAMP(timezone=True), server_default=func.now())
     cmd_executed_time = db.Column(db.TIMESTAMP(timezone=True))
+    cmd_return = db.Column(db.Integer)
 
 
 class ServerConfigs(db.Model):
@@ -60,6 +61,31 @@ class ServerConfigs(db.Model):
     reload_when_empty = db.Column(db.Integer, nullable=False)
     module_name = db.Column(db.String, nullable=False)
     port = db.Column(db.Integer, nullable=False)
+    def to_dict(self):{
+        'id': self.id,
+        'is_active': self.is_active,
+        'database': self.database,
+        'server_name': self.server_name,
+        'max_players': self.max_players,
+        'min_level': self.min_level,
+        'max_level': self.max_level,
+        'pause_play': self.pause_play,
+        'pvp': self.pvp,
+        'server_vault': self.server_vault,
+        'enforce_legal_char': self.enforce_legal_char,
+        'item_lv_restrictions': self.item_lv_restrictions,
+        'game_type': self.game_type,
+        'one_party': self.one_party,
+        'difficulty': self.difficulty,
+        'auto_save_interval': self.auto_save_interval,
+        'player_pwd': self.player_pwd,
+        'dm_pwd': self.dm_pwd,
+        'admin_pwd': self.admin_pwd,
+        'public_server': self.public_server,
+        'reload_when_empty': self.reload_when_empty,
+        'module_name': self.module_name,
+        'port': self.port,
+    }
 
 
 class VolumesDirs(db.Model):
@@ -82,12 +108,17 @@ class ServerVolumes(db.Model):
     server_configs_id = db.Column(db.Integer, nullable=False)
     volumes_info_id = db.Column(db.Integer, nullable=False)
 
-
 class ServerStatus(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     server_cfg_id = db.Column(db.String, nullable=False, unique=True, index=True)
     status = db.Column(db.String, nullable=False)
-
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'server_cfg_id': self.server_cfg_id,
+            'status': self.status,
+        }
 
 class SystemWatchdog(db.Model):
     component = db.Column(db.String, nullable=False, unique=True, primary_key=True)

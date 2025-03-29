@@ -6,15 +6,46 @@ from .models.users import User
 from .models.blog import Post
 from .models.server_nwn import (ServerConfigs, ServerCmds, PcActiveLog, VolumesInfo, VolumesDirs, ServerVolumes,
                                 ServerStatus)
+from flask import Flask, render_template
+from flask_socketio import SocketIO
+from flask_session import Session
+from flask_login import LoginManager, current_user
+from gevent import monkey 
 
+monkey.patch_socket()
+monkey.patch_all()
+
+
+login_manager = LoginManager()
+login_manager.login_view = "auth.login"
+
+socketio = SocketIO()
+session = Session()
 
 def create_app(test_config=None):
     # create and configure the app
     app = Flask(__name__, instance_relative_config=True)
+    config_type = os.getenv('CONFIG_TYPE', default='gs_manager.config.DevelopmentConfig')
+    app.config.from_object(config_type)
+    login_manager.init_app(app)
+
+    @login_manager.user_loader
+    def load_user(user_id):
+        return User.query.filter(User.id == int(user_id)).first()
+
+    # Session type must be set for session.init_app() to work
+    # app.config["SESSION_PERMANENT"] = False
+    app.config["SESSION_TYPE"] = "filesystem"
+    session.init_app(app)
+    #Initialize socketio
+    socketio.init_app(app, manage_session=False, 
+                    cors_allowed_origins=app.config["CORS_ALLOWED_ORIGINS"], 
+                    async_mode='gevent')
 
     # load the instance config, if it exists, when not testing
     # TODO: Look into if this is the correct way to load a config file
-    app.config.from_object("gs_manager.config.DevelopmentConfig")
+    
+    #app.config.from_object("gs_manager.config.DevelopmentConfig")
 
     db.init_app(app)
     migrate.init_app(app, db)
@@ -61,7 +92,7 @@ def create_app(test_config=None):
 
     return app
 
-#if __name__ == '__main__':
-#    app = create_app()
-#    app.run(debug=True, port=5001)
+if __name__ == "__main__":
+    app = create_app()
+    socketio.run(app)        
 

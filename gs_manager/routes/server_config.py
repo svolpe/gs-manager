@@ -156,7 +156,7 @@ def do_action(action):
         cfg_delete(id)
     elif cmd == "copy":
         cfg_copy(id)
-    elif cmd == "stop" or cmd == "start":
+    elif cmd in ["stop", "start"]:
         #TODO: figure out how to handle the userID instead of just using 0
         send_cmd(cmd, 0, str(id))
 

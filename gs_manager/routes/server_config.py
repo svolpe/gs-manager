@@ -95,7 +95,7 @@ def get_server_info():
             update={'severity':'none', 'status':'not activated', 'action':'start'}
         elif q.status == "running":
             update={'severity':'good', 'status':q.status, 'action':'stop'}
-        elif q.status in "starting stopping loading running":
+        elif q.status in ("starting", "stopping", "loading", "running"):
             update={'severity':'warn', 'status':q.status, 'action':'none'}
         elif q.status == "stopped":
             if q.is_active:

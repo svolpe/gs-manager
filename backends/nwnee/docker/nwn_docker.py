@@ -126,11 +126,12 @@ class NwnServer:
         
         mod_loaded_flt = "Module loaded".encode()
         # This sets the retry count
+        
         while retry_cnt > 0:
             start_time = time.time()
             start_flt_b = start_flt.encode()
             data_buf = bytearray()
-
+            log_file = f"{self.docker_name}_nwn_log.log"
             # Turn off blocking because there is no communications protocol to know the size of a message ahead of time
             self._socket.setblocking(False)
 
@@ -141,6 +142,13 @@ class NwnServer:
                 try:
                     # TODO: investigate increasing the recv size to optimize speed
                     data_buf += self._socket.recv(1048)
+                    #try:
+                    #    if data_buf:
+                    #        with open(log_file, 'ab') as file:
+                    #            file.write(data_buf)
+                    #except Exception as e:
+                    #    print (f"LOG FILE: An error occured: {e}")
+
                 except:
                     # TODO: This makes the assumption that a recv error after the start filter packet is a EOL.
                     if start_flt_b in data_buf:
@@ -207,7 +215,11 @@ class NwnServer:
         # TODO: This is a temporary hack for DB support a full configuration interface will be added later
         if self.server_cfg['database'] == 'yes':
             self._cfg['NWNX_CORE_SKIP_ALL'] = 'y'
+            self._cfg['NWNX_CORE_SKIP'] = 'n'
+            self._cfg['NWNX_CORE_LOG_LEVEL'] = '7'
             self._cfg['NWNX_SQL_SKIP'] = 'n'
+            self._cfg['NWNX_SQL_USE_UTF8'] = 'true'
+            self._cfg['NWNX_SQL_CHARACTER_SET'] = 'utf8'
             self._cfg['NWNX_SQL_DATABASE'] = self.backend_cfg.nwnx_sql_cfg["NWNX_SQL_DATABASE"]
             self._cfg['NWNX_SQL_PASSWORD'] = self.backend_cfg.nwnx_sql_cfg["NWNX_SQL_PASSWORD"]
             self._cfg['NWNX_SQL_USERNAME'] = self.backend_cfg.nwnx_sql_cfg["NWNX_SQL_USERNAME"]

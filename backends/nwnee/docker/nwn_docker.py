@@ -141,6 +141,9 @@ class NwnServer:
                 try:
                     # TODO: investigate increasing the recv size to optimize speed
                     data_buf += self._socket.recv(1048)
+                    if "LOG_FILE" in self.backend_cfg.nwnx_sql_cfg["LOG_FILE"]:
+                        with open(self.backend_cfg.nwnx_sql_cfg["LOG_FILE"], 'a') as file:
+                            file.write(data_buf.decode())
                 except:
                     # TODO: This makes the assumption that a recv error after the start filter packet is a EOL.
                     if start_flt_b in data_buf:

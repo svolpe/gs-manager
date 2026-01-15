@@ -10,6 +10,112 @@ class NPCData:
         self.value = 0
         self.loc = 0
         self.data_type = 0
+        self.loc_string = None  # Store full CExoLocString for text fields
+
+
+class CExoLocString:
+    """Handles CExoLocString structures in GFF files.
+
+    A CExoLocString can contain multiple language-specific strings.
+    Structure:
+        - total_size (4 bytes): total size of the entire structure in bytes
+        - string_ref (4 bytes): reference to dialog.tlk (-1 if unused)
+        - string_count (4 bytes): number of language strings
+        - For each string:
+            - language_id (4 bytes): language identifier (0=English, etc.)
+            - string_length (4 bytes): length of the string
+            - string_data (variable): the actual string data
+    """
+
+    def __init__(self):
+        self.total_size = 0
+        self.string_ref = -1
+        self.string_count = 0
+        self.strings = {}  # {language_id: string}
+
+    @classmethod
+    def read_from_file(cls, file, offset):
+        """Read a CExoLocString from a file at the given offset."""
+        loc_string = cls()
+        file.seek(offset)
+
+        loc_string.total_size = int.from_bytes(file.read(4), "little")
+        loc_string.string_ref = int.from_bytes(file.read(4), "little", signed=True)
+
+        # Check if this is an empty CExoLocString (only 8 bytes: total_size + string_ref)
+        if loc_string.total_size == 8:
+            loc_string.string_count = 0
+            return loc_string
+
+        loc_string.string_count = int.from_bytes(file.read(4), "little")
+
+        for _ in range(loc_string.string_count):
+            language_id = int.from_bytes(file.read(4), "little")
+            string_length = int.from_bytes(file.read(4), "little")
+            string_data = file.read(string_length).decode('utf-8', errors='replace')
+            loc_string.strings[language_id] = string_data
+
+        return loc_string
+
+    def get_string(self, language_id=0):
+        """Get string for a specific language, defaults to English (0)."""
+        if language_id in self.strings:
+            return self.strings[language_id]
+        # Return first available string if requested language not found
+        if self.strings:
+            return next(iter(self.strings.values()))
+        return ""
+
+    def set_string(self, text, language_id=0):
+        """Set string for a specific language."""
+        if text:
+            self.strings[language_id] = text
+            self.string_count = len(self.strings)
+        else:
+            # If setting empty string, remove it
+            if language_id in self.strings:
+                del self.strings[language_id]
+            self.string_count = len(self.strings)
+        self._calculate_size()
+
+    def clear(self):
+        """Clear all strings, making this an empty CExoLocString."""
+        self.strings = {}
+        self.string_count = 0
+        self._calculate_size()
+
+    def _calculate_size(self):
+        """Calculate the total size of the structure."""
+        if self.string_count == 0:
+            # Empty CExoLocString: only total_size (4 bytes) + string_ref (4 bytes) = 8 bytes
+            self.total_size = 8
+        else:
+            # 12 bytes for header (total_size, string_ref, string_count)
+            size = 12
+            for lang_id, string in self.strings.items():
+                # 4 bytes for language_id, 4 bytes for string_length, plus string data
+                size += 8 + len(string.encode('utf-8'))
+            self.total_size = size
+
+    def to_bytes(self):
+        """Convert the CExoLocString to bytes for writing to file."""
+        self._calculate_size()
+
+        data = bytearray()
+        data.extend(self.total_size.to_bytes(4, "little"))
+        data.extend(self.string_ref.to_bytes(4, "little", signed=True))
+
+        # Only write string_count and strings if there are any
+        if self.string_count > 0:
+            data.extend(self.string_count.to_bytes(4, "little"))
+
+            for language_id, string in self.strings.items():
+                string_bytes = string.encode('utf-8')
+                data.extend(language_id.to_bytes(4, "little"))
+                data.extend(len(string_bytes).to_bytes(4, "little"))
+                data.extend(string_bytes)
+
+        return bytes(data)
 
 
 class Header:
@@ -157,6 +263,12 @@ class Character:
             npc_data = NPCData()
             # Simple fields
             npc_data.label = self.labels[field.label_index]
+
+            # Skip if we already have this field (only keep first occurrence)
+            # This prevents inventory item fields from overwriting character fields
+            if npc_data.label in self.npc_data:
+                continue
+
             if field.type in [0, 1, 2, 3, 4, 5, 8]:
                 npc_data.loc = self.file.tell()
                 npc_data.data_type = field.type
@@ -167,23 +279,17 @@ class Character:
                     if npc_data.label in ["Race", "Gender"]
                     else field.data
                 )
-            elif field.label_index in [1, 2, 3]:
+            elif field.type == 12:  # CExoLocString type
                 offset = self.header.field_data_offset + field.data_or_offset
                 npc_data.loc = offset
-                self.file.seek(offset)
+                npc_data.data_type = field.type
 
-                # TODO: Add multiple string support: currently this code only supports 1 string in the string array
-                _total_size = int.from_bytes(self.file.read(4), "little")
-                _string_ref = int.from_bytes(self.file.read(4), "little")
-                _string_count = int.from_bytes(self.file.read(4), "little")
-                _string_id = int.from_bytes(self.file.read(4), "little")
-                string_len = int.from_bytes(self.file.read(4), "little")
-                string = self.file.read(string_len)
-                npc_data.label = self.labels[field.label_index]
                 try:
-                    npc_data.value = string.decode()
-                except Exception:
-                    # TODO: Figure out why there are bad description items in the field table
+                    # Use CExoLocString to properly read all language strings
+                    npc_data.loc_string = CExoLocString.read_from_file(self.file, offset)
+                    npc_data.value = npc_data.loc_string.get_string()
+                except Exception as e:
+                    # Handle corrupted or invalid string data
                     continue
             # Get CRefs
             elif field.label_index in [47]:
@@ -216,25 +322,98 @@ class Character:
         self.file.close()
         
     def get_alignment(self):
-        
+
         good_evil = self.npc_data["GoodEvil"].value
         lawful_chaotic = self.npc_data["LawfulChaotic"].value
-        if lawful_chaotic <= 15: 
+        if lawful_chaotic <= 15:
             align1 = "Chaotic"
-        if lawful_chaotic > 15 and lawful_chaotic < 85 and good_evil >= 85 or good_evil <= 15: 
+        if lawful_chaotic > 15 and lawful_chaotic < 85 and good_evil >= 85 or good_evil <= 15:
             align1 = "Neutral"
-        if lawful_chaotic > 15 and lawful_chaotic < 85 and good_evil < 85 or good_evil > 15: 
+        if lawful_chaotic > 15 and lawful_chaotic < 85 and good_evil < 85 or good_evil > 15:
             align1 = "True"
-        if lawful_chaotic >= 85: 
+        if lawful_chaotic >= 85:
             align1 = "Lawful"
         if good_evil <= 15:
             align2 = "Evil"
         if good_evil > 15 and good_evil < 85:
             align2 = "Neutral"
-        if good_evil >= 85: 
+        if good_evil >= 85:
             align2 = "Good"
 
         return f'{align1} {align2}';
+
+    def save_string_field(self, field_name, new_value, language_id=0):
+        """Save a string field (like Description, FirstName, LastName) to the BIC file.
+
+        Args:
+            field_name: Name of the field to update (e.g., 'Description', 'FirstName')
+            new_value: New string value
+            language_id: Language ID (0 for English)
+
+        Returns:
+            True if successful, False otherwise
+        """
+        if field_name not in self.npc_data:
+            return False
+
+        npc_data = self.npc_data[field_name]
+
+        # Check if this field has a CExoLocString
+        if npc_data.loc_string is None:
+            return False
+
+        # Calculate the OLD size from the actual data structure (not the stored total_size)
+        # This handles cases where tools like Moneo wrote incorrect total_size fields
+        old_loc_string = npc_data.loc_string
+        old_calculated_size = 12  # header (total_size + string_ref + string_count)
+        for lang_id, string in old_loc_string.strings.items():
+            old_calculated_size += 8 + len(string.encode('utf-8'))  # lang_id + str_len + data
+        if old_loc_string.string_count == 0:
+            old_calculated_size = 8  # empty CExoLocString
+
+        # Update the string in the CExoLocString object
+        npc_data.loc_string.set_string(new_value, language_id)
+        new_bytes = npc_data.loc_string.to_bytes()
+        new_size = len(new_bytes)
+
+        # Read the entire file into memory
+        with open(self.file_name, 'rb') as f:
+            file_data = bytearray(f.read())
+
+        offset = npc_data.loc
+
+        # Check if sizes match based on ACTUAL data size
+        if old_calculated_size == new_size:
+            # Replace the data at the location (using old_calculated_size for how many bytes to replace)
+            # This handles cases where the stored total_size field was wrong
+            file_data[offset:offset+old_calculated_size] = new_bytes
+
+            # Write back to file
+            with open(self.file_name, 'wb') as f:
+                f.write(file_data)
+
+            # Update the in-memory value
+            npc_data.value = new_value
+            return True
+        else:
+            # Size mismatch - need to rebuild the field data section
+            # For now, return False to indicate this case needs special handling
+            # In future, we could implement full GFF reconstruction
+            raise ValueError(
+                f"String size changed from {old_calculated_size} to {new_size} bytes. "
+                f"This requires rebuilding the entire field data section, which is not yet implemented."
+            )
+
+    def save_description(self, new_description):
+        """Convenience method to save the character description.
+
+        Args:
+            new_description: New description text
+
+        Returns:
+            True if successful, False otherwise
+        """
+        return self.save_string_field('Description', new_description)
     
     def _save_data(self, field, value):
         # Remove new line

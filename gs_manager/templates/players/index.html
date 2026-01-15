@@ -10,6 +10,7 @@
             <th>ID</th>
             <th>Character Name</th>
             <th>Player Name</th>
+            <th>Level</th>
             <th>Server Name</th>
             <th>Log On Time</th>
         </tr>
@@ -24,7 +25,7 @@
     var table = new DataTable('#t_serv_cfg',{
       "ajax": "/player_data",
       columnDefs: [
-      {type:  'date', targets: 4, render: DataTable.render.datetime('ddd, DD MMM YYYY h:mm:ss a', 'en')},
+      {type:  'date', targets: 5, render: DataTable.render.datetime('ddd, DD MMM YYYY h:mm:ss a', 'en')},
       {
           target: 0,
           visible: false
@@ -34,6 +35,7 @@
         { data: "id"},
         { data: "player_name"},
         { data: "character_name"},
+        { data: "character_level", className: "dt-center"},
         { data: "server_name"},
         { data: "logon_time"},
       ],

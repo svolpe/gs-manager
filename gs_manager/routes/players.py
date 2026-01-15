@@ -11,18 +11,28 @@ from sqlalchemy import null
 from .. import socketio
 from flask_socketio import emit
 from flask import request
+from ..services.character_service import CharacterService
 
 pc = Blueprint('players', __name__)
 
 def get_active_players():
     query = (PcActiveLog.query.with_entities(
     PcActiveLog.id, PcActiveLog.player_name, PcActiveLog.logon_time, PcActiveLog.docker_name, PcActiveLog.server_name,
-    PcActiveLog.character_name)
+    PcActiveLog.character_name, PcActiveLog.cd_key)
         .filter(PcActiveLog.logoff_time.is_(None))).all()
     data = []
     for row in query:
         record = row._asdict()
         record['logon_time'] = record['logon_time'].strftime("%Y-%m-%d %H:%M:%S")
+
+        # Fetch character level from BIC file
+        char_level = CharacterService.get_character_level(
+            record['cd_key'],
+            record['character_name'],
+            record['server_name']
+        )
+        record['character_level'] = char_level if char_level is not None else 'N/A'
+
         data.append(record)
     return data
 

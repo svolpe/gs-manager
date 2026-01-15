@@ -172,48 +172,25 @@ class FileManagerBp(object):
                     last_name_p = request.form.get('last_name', '')
                     description_p = request.form.get('description', '')
 
-                    # Debug logging
-                    print(f"DEBUG: Saving to file: {file}")
-                    print(f"DEBUG: first_name_p='{first_name_p}'")
-                    print(f"DEBUG: last_name_p='{last_name_p}'")
-                    print(f"DEBUG: description_p='{description_p[:50]}...'")
-
-                    # Use native Python methods instead of Moneo
+                    # Use native Python methods to save changes
                     try:
                         save_count = 0
                         if first_name_p and 'FirstName' in my_char.npc_data:
-                            print(f"DEBUG: Saving FirstName")
-                            result = my_char.save_string_field('FirstName', first_name_p)
-                            print(f"DEBUG: FirstName save result: {result}")
-                            if result:
+                            if my_char.save_string_field('FirstName', first_name_p):
                                 save_count += 1
                         if last_name_p and 'LastName' in my_char.npc_data:
-                            print(f"DEBUG: Saving LastName")
-                            result = my_char.save_string_field('LastName', last_name_p)
-                            print(f"DEBUG: LastName save result: {result}")
-                            if result:
+                            if my_char.save_string_field('LastName', last_name_p):
                                 save_count += 1
                         if description_p and 'Description' in my_char.npc_data:
-                            print(f"DEBUG: Saving Description")
-                            result = my_char.save_description(description_p)
-                            print(f"DEBUG: Description save result: {result}")
-                            if result:
+                            if my_char.save_description(description_p):
                                 save_count += 1
 
                         if save_count > 0:
                             flash(f'Character updated successfully! ({save_count} fields saved)', 'success')
                         else:
                             flash('No changes made (fields were empty or missing)', 'warning')
-                    except ValueError as e:
-                        # Handle size mismatch error
-                        flash(f'Error updating character: {str(e)}', 'error')
-                        print(f"DEBUG: ValueError: {e}")
-                        return redirect(url_for('file_manager.edit', path=file))
                     except Exception as e:
-                        flash(f'Unexpected error: {str(e)}', 'error')
-                        print(f"DEBUG: Exception: {e}")
-                        import traceback
-                        traceback.print_exc()
+                        flash(f'Error updating character: {str(e)}', 'error')
                         return redirect(url_for('file_manager.edit', path=file))
 
 

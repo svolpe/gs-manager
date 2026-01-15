@@ -342,6 +342,119 @@ class Character:
 
         return f'{align1} {align2}';
 
+    def _rebuild_field_data_section(self, field_name, new_value, language_id=0):
+        """Rebuild the entire field data section when a field size changes.
+
+        This is necessary when a CExoLocString changes size, as all subsequent
+        field offsets need to be updated.
+        """
+        # Read entire file
+        with open(self.file_name, 'rb') as f:
+            file_data = bytearray(f.read())
+
+        # Build a list of all fields that have data in the field data section
+        # We need to track their order and rebuild them
+        field_data_items = []
+
+        for idx, field in enumerate(self.fields):
+            label = self.labels[field.label_index]
+
+            # Type 12 = CExoLocString (stored in field data section)
+            if field.type == 12:
+                # Find this field in npc_data
+                if label in self.npc_data and self.npc_data[label].loc_string:
+                    loc_string = self.npc_data[label].loc_string
+
+                    # If this is the field we're updating, use the new value
+                    if label == field_name:
+                        loc_string.set_string(new_value, language_id)
+
+                    field_data_items.append({
+                        'field_index': idx,
+                        'field': field,
+                        'label': label,
+                        'data': loc_string.to_bytes(),
+                        'offset': field.data_or_offset
+                    })
+
+        # Sort by original offset to maintain order
+        field_data_items.sort(key=lambda x: x['offset'])
+
+        # Build new field data section
+        new_field_data = bytearray()
+        offset_map = {}  # Maps old offset to new offset
+
+        for item in field_data_items:
+            old_offset = item['offset']
+            new_offset = len(new_field_data)
+            offset_map[old_offset] = new_offset
+            new_field_data.extend(item['data'])
+
+        # Update field offsets in the field table
+        for item in field_data_items:
+            field_idx = item['field_index']
+            old_offset = item['offset']
+            new_offset = offset_map[old_offset]
+
+            # Update in the fields array
+            self.fields[field_idx].data_or_offset = new_offset
+
+            # Write the new offset to the file data (in the field table)
+            field_table_offset = self.header.field_offset + (field_idx * 12) + 8  # 12 bytes per field, offset is at byte 8
+            file_data[field_table_offset:field_table_offset+4] = new_offset.to_bytes(4, "little")
+
+        # Replace the entire field data section
+        old_field_data_start = self.header.field_data_offset
+        old_field_data_end = old_field_data_start + self.header.field_data_count
+
+        # Reconstruct file: everything before field data + new field data + everything after field data
+        new_file_data = (
+            file_data[:old_field_data_start] +
+            new_field_data +
+            file_data[old_field_data_end:]
+        )
+
+        # Update header's field_data_count
+        new_field_data_count = len(new_field_data)
+        size_delta = new_field_data_count - self.header.field_data_count
+
+        # Write new field_data_count to header (at offset 36 in header)
+        header_field_data_count_offset = 36
+        new_file_data[header_field_data_count_offset:header_field_data_count_offset+4] = new_field_data_count.to_bytes(4, "little")
+
+        # Update all section offsets that come after field_data_offset
+        # field_indices_offset and list_indices_offset need to be adjusted
+        if size_delta != 0:
+            # Update field_indices_offset (at offset 40 in header)
+            if self.header.field_indices_offset > 0:
+                new_field_indices_offset = self.header.field_indices_offset + size_delta
+                new_file_data[40:44] = new_field_indices_offset.to_bytes(4, "little")
+
+            # Update list_indices_offset (at offset 48 in header)
+            if self.header.list_indices_offset > 0:
+                new_list_indices_offset = self.header.list_indices_offset + size_delta
+                new_file_data[48:52] = new_list_indices_offset.to_bytes(4, "little")
+
+        # Write the modified file
+        with open(self.file_name, 'wb') as f:
+            f.write(new_file_data)
+
+        # Update in-memory values
+        self.header.field_data_count = new_field_data_count
+        if self.header.field_indices_offset > 0:
+            self.header.field_indices_offset += size_delta
+        if self.header.list_indices_offset > 0:
+            self.header.list_indices_offset += size_delta
+
+        # Update NPC data offset and value
+        if field_name in self.npc_data:
+            self.npc_data[field_name].value = new_value
+            # Find the new offset for this field
+            for item in field_data_items:
+                if item['label'] == field_name:
+                    self.npc_data[field_name].loc = self.header.field_data_offset + offset_map[item['offset']]
+                    break
+
     def save_string_field(self, field_name, new_value, language_id=0):
         """Save a string field (like Description, FirstName, LastName) to the BIC file.
 
@@ -376,33 +489,24 @@ class Character:
         new_bytes = npc_data.loc_string.to_bytes()
         new_size = len(new_bytes)
 
-        # Read the entire file into memory
-        with open(self.file_name, 'rb') as f:
-            file_data = bytearray(f.read())
-
-        offset = npc_data.loc
-
         # Check if sizes match based on ACTUAL data size
         if old_calculated_size == new_size:
-            # Replace the data at the location (using old_calculated_size for how many bytes to replace)
-            # This handles cases where the stored total_size field was wrong
+            # Simple case: same size, update in place
+            with open(self.file_name, 'rb') as f:
+                file_data = bytearray(f.read())
+
+            offset = npc_data.loc
             file_data[offset:offset+old_calculated_size] = new_bytes
 
-            # Write back to file
             with open(self.file_name, 'wb') as f:
                 f.write(file_data)
 
-            # Update the in-memory value
             npc_data.value = new_value
             return True
         else:
-            # Size mismatch - need to rebuild the field data section
-            # For now, return False to indicate this case needs special handling
-            # In future, we could implement full GFF reconstruction
-            raise ValueError(
-                f"String size changed from {old_calculated_size} to {new_size} bytes. "
-                f"This requires rebuilding the entire field data section, which is not yet implemented."
-            )
+            # Complex case: size changed, need to rebuild field data section
+            self._rebuild_field_data_section(field_name, new_value, language_id)
+            return True
 
     def save_description(self, new_description):
         """Convenience method to save the character description.

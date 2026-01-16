@@ -171,6 +171,7 @@ class FileManagerBp(object):
                     first_name_p = request.form.get('first_name', '')
                     last_name_p = request.form.get('last_name', '')
                     description_p = request.form.get('description', '')
+                    deity_p = request.form.get('deity', '')
 
                     # Use native Python methods to save changes
                     try:
@@ -183,6 +184,9 @@ class FileManagerBp(object):
                                 save_count += 1
                         if description_p and 'Description' in my_char.npc_data:
                             if my_char.save_description(description_p):
+                                save_count += 1
+                        if deity_p and 'Deity' in my_char.npc_data:
+                            if my_char.save_string_field('Deity', deity_p):
                                 save_count += 1
 
                         if save_count > 0:

@@ -11,6 +11,7 @@ class NPCData:
         self.loc = 0
         self.data_type = 0
         self.loc_string = None  # Store full CExoLocString for text fields
+        self.field_index = None  # Track which field this data came from
 
 
 class CExoLocString:
@@ -49,9 +50,19 @@ class CExoLocString:
 
         loc_string.string_count = int.from_bytes(file.read(4), "little")
 
+        # Validate string_count - if it's unreasonably large, this is likely corrupted or wrong field type
+        # NWN typically has only a few language strings (max 20-30 languages in reality)
+        if loc_string.string_count > 100:
+            raise ValueError(f"Invalid CExoLocString: string_count={loc_string.string_count} is unreasonably large")
+
         for _ in range(loc_string.string_count):
             language_id = int.from_bytes(file.read(4), "little")
             string_length = int.from_bytes(file.read(4), "little")
+
+            # Validate string length as well
+            if string_length > 1000000:  # 1MB max per string
+                raise ValueError(f"Invalid CExoLocString: string_length={string_length} is unreasonably large")
+
             string_data = file.read(string_length).decode('utf-8', errors='replace')
             loc_string.strings[language_id] = string_data
 
@@ -85,28 +96,40 @@ class CExoLocString:
         self._calculate_size()
 
     def _calculate_size(self):
-        """Calculate the total size of the structure."""
+        """Calculate the total size of the structure.
+
+        Per GFF spec, total_size is the size of data AFTER the total_size field itself.
+        """
         if self.string_count == 0:
-            # Empty CExoLocString: only total_size (4 bytes) + string_ref (4 bytes) = 8 bytes
-            self.total_size = 8
+            # Empty CExoLocString: total_size excludes itself, so just string_ref = 4 bytes
+            # (string_count is not written when empty)
+            self.total_size = 4
         else:
-            # 12 bytes for header (total_size, string_ref, string_count)
-            size = 12
+            # string_ref (4) + string_count (4) = 8 bytes base
+            size = 8
             for lang_id, string in self.strings.items():
                 # 4 bytes for language_id, 4 bytes for string_length, plus string data
                 size += 8 + len(string.encode('utf-8'))
             self.total_size = size
 
-    def to_bytes(self):
-        """Convert the CExoLocString to bytes for writing to file."""
-        self._calculate_size()
+    def to_bytes(self, preserve_total_size=False):
+        """Convert the CExoLocString to bytes for writing to file.
+
+        Args:
+            preserve_total_size: If True, keep the original total_size value instead
+                               of recalculating it. This is needed for files where
+                               other fields share/overlap the CExoLocString data.
+        """
+        if not preserve_total_size:
+            self._calculate_size()
 
         data = bytearray()
         data.extend(self.total_size.to_bytes(4, "little"))
         data.extend(self.string_ref.to_bytes(4, "little", signed=True))
 
-        # Only write string_count and strings if there are any
-        if self.string_count > 0:
+        # Write string_count if total_size > 4 (format includes it) OR if there are strings
+        # This handles empty CExoLocStrings that still have string_count=0 in the file
+        if self.total_size > 4 or self.string_count > 0:
             data.extend(self.string_count.to_bytes(4, "little"))
 
             for language_id, string in self.strings.items():
@@ -256,10 +279,10 @@ class Character:
             field.data_or_offset = int.from_bytes(self.file.read(4), "little")
             # Simple data types
             self.fields.append(field)
-        
+
         # Read field data
         # Read data stored in fields
-        for field in self.fields:
+        for idx, field in enumerate(self.fields):
             npc_data = NPCData()
             # Simple fields
             npc_data.label = self.labels[field.label_index]
@@ -279,6 +302,19 @@ class Character:
                     if npc_data.label in ["Race", "Gender"]
                     else field.data
                 )
+            elif field.type == 10:  # CExoString type
+                offset = self.header.field_data_offset + field.data_or_offset
+                npc_data.loc = offset
+                npc_data.data_type = field.type
+
+                try:
+                    self.file.seek(offset)
+                    string_len = int.from_bytes(self.file.read(4), "little")
+                    string_data = self.file.read(string_len)
+                    npc_data.value = string_data.decode('utf-8', errors='replace')
+                except Exception as e:
+                    # Handle corrupted or invalid string data
+                    continue
             elif field.type == 12:  # CExoLocString type
                 offset = self.header.field_data_offset + field.data_or_offset
                 npc_data.loc = offset
@@ -306,6 +342,7 @@ class Character:
                 npc_data.label = self.labels[field.label_index]
 
             # Store data in NPC Object
+            npc_data.field_index = idx
             self.npc_data[npc_data.label] = npc_data
 
     def load_file(self, a_filename):
@@ -345,7 +382,7 @@ class Character:
     def _rebuild_field_data_section(self, field_name, new_value, language_id=0):
         """Rebuild the entire field data section when a field size changes.
 
-        This is necessary when a CExoLocString changes size, as all subsequent
+        This is necessary when a CExoString or CExoLocString changes size, as all subsequent
         field offsets need to be updated.
         """
         # Read entire file
@@ -355,27 +392,193 @@ class Character:
         # Build a list of all fields that have data in the field data section
         # We need to track their order and rebuild them
         field_data_items = []
+        processed_offsets = set()  # Track which offsets we've already processed
+        claimed_ranges = []  # Track (start, end) byte ranges claimed by type 10/12 fields
+
+        def is_offset_claimed(offset):
+            """Check if an offset falls within any claimed range."""
+            for start, end in claimed_ranges:
+                if start <= offset < end:
+                    return True
+            return False
 
         for idx, field in enumerate(self.fields):
             label = self.labels[field.label_index]
 
+            # Skip types that don't use the field_data section:
+            # - Types 0-5, 8: inline data (stored directly in data_or_offset)
+            # - Type 14: Struct (data_or_offset is struct index)
+            # - Type 15: List (data_or_offset is offset into list_indices section)
+            if field.type in [0, 1, 2, 3, 4, 5, 8, 14, 15]:
+                continue
+
+            # Type 10 = CExoString (stored in field data section)
+            if field.type == 10:
+                # Check if this is the specific field we loaded into npc_data
+                if label in self.npc_data and self.npc_data[label].field_index == idx:
+                    # This is our field - get current value or use new value if this is the field we're updating
+                    if label == field_name:
+                        value = new_value
+                    else:
+                        value = self.npc_data[label].value
+
+                    # Encode as CExoString format: 4 bytes length + UTF-8 string
+                    string_bytes = value.encode('utf-8')
+                    data = bytearray()
+                    data.extend(len(string_bytes).to_bytes(4, "little"))
+                    data.extend(string_bytes)
+
+                    # Mark the ORIGINAL byte range as claimed (not the new size!)
+                    # This prevents other fields from being incorrectly skipped when this field grows
+                    orig_offset = self.header.field_data_offset + field.data_or_offset
+                    orig_str_len = int.from_bytes(file_data[orig_offset:orig_offset+4], "little")
+                    orig_size = 4 + orig_str_len
+                    claimed_ranges.append((field.data_or_offset, field.data_or_offset + orig_size))
+
+                    field_data_items.append({
+                        'field_index': idx,
+                        'field': field,
+                        'label': label,
+                        'data': data,
+                        'offset': field.data_or_offset
+                    })
+                else:
+                    # This is a different field with the same label - preserve its original data
+                    # Skip if we've already processed this offset or it's within a claimed range
+                    if field.data_or_offset in processed_offsets:
+                        continue
+                    if is_offset_claimed(field.data_or_offset):
+                        continue
+                    processed_offsets.add(field.data_or_offset)
+
+                    offset = self.header.field_data_offset + field.data_or_offset
+
+                    # Read the size: 4 bytes for length + the string data
+                    try:
+                        string_len = int.from_bytes(file_data[offset:offset+4], "little")
+                        size = 4 + string_len
+                        data = file_data[offset:offset+size]
+
+                        # Mark this byte range as claimed
+                        claimed_ranges.append((field.data_or_offset, field.data_or_offset + size))
+
+                        field_data_items.append({
+                            'field_index': idx,
+                            'field': field,
+                            'label': label,
+                            'data': data,
+                            'offset': field.data_or_offset
+                        })
+                    except:
+                        # If we can't read it, skip this field
+                        continue
+
             # Type 12 = CExoLocString (stored in field data section)
-            if field.type == 12:
-                # Find this field in npc_data
-                if label in self.npc_data and self.npc_data[label].loc_string:
+            elif field.type == 12:
+                # Check if this is the specific field we loaded into npc_data
+                if label in self.npc_data and self.npc_data[label].field_index == idx and self.npc_data[label].loc_string:
                     loc_string = self.npc_data[label].loc_string
 
                     # If this is the field we're updating, use the new value
                     if label == field_name:
                         loc_string.set_string(new_value, language_id)
 
+                    # For fields we're NOT editing, preserve the original total_size from file
+                    # For fields we ARE editing, use the newly calculated total_size
+                    preserve_size = (label != field_name)
+                    data = loc_string.to_bytes(preserve_total_size=preserve_size)
+
+                    # Mark the ORIGINAL byte range as claimed (not the new size!)
+                    # CExoLocString: total_size (4 bytes) + total_size bytes of data
+                    orig_offset = self.header.field_data_offset + field.data_or_offset
+                    orig_total_size = int.from_bytes(file_data[orig_offset:orig_offset+4], "little")
+                    orig_size = 4 + orig_total_size
+                    claimed_ranges.append((field.data_or_offset, field.data_or_offset + orig_size))
+
                     field_data_items.append({
                         'field_index': idx,
                         'field': field,
                         'label': label,
-                        'data': loc_string.to_bytes(),
+                        'data': data,
                         'offset': field.data_or_offset
                     })
+                else:
+                    # This is a different field with the same label - preserve its original data
+                    # Skip if we've already processed this offset or it's within a claimed range
+                    if field.data_or_offset in processed_offsets:
+                        continue
+                    if is_offset_claimed(field.data_or_offset):
+                        continue
+                    processed_offsets.add(field.data_or_offset)
+
+                    offset = self.header.field_data_offset + field.data_or_offset
+
+                    # Read the CExoLocString structure properly and preserve its original total_size
+                    try:
+                        # Open temp file handle to read with CExoLocString
+                        with open(self.file_name, 'rb') as temp_file:
+                            loc_string = CExoLocString.read_from_file(temp_file, offset)
+                            # Preserve original total_size for compatibility
+                            data = loc_string.to_bytes(preserve_total_size=True)
+
+                        # Mark this byte range as claimed (use actual data length)
+                        claimed_ranges.append((field.data_or_offset, field.data_or_offset + len(data)))
+
+                        field_data_items.append({
+                            'field_index': idx,
+                            'field': field,
+                            'label': label,
+                            'data': data,
+                            'offset': field.data_or_offset
+                        })
+                    except:
+                        # If we can't read it, skip this field
+                        continue
+
+            # For all other types that use field data section (6, 7, 9, 11, 13)
+            # Read their data as-is from the original file
+            elif field.type in [6, 7, 9, 11, 13]:
+                # Skip if we've already processed this offset (multiple fields can share same data)
+                if field.data_or_offset in processed_offsets:
+                    continue
+
+                # Skip if this offset falls within a byte range claimed by a type 10/12 field
+                # (This handles cases where fields point into the middle of other fields' data)
+                if is_offset_claimed(field.data_or_offset):
+                    continue
+
+                processed_offsets.add(field.data_or_offset)
+
+                offset = self.header.field_data_offset + field.data_or_offset
+
+                # Determine the size by finding the next field's offset or end of section
+                # Find all offsets in this section (only types that actually use field_data)
+                field_data_types = {6, 7, 9, 10, 11, 12, 13}
+                all_offsets = [f.data_or_offset for f in self.fields if f.type in field_data_types]
+                all_offsets_sorted = sorted(set(all_offsets))
+
+                # Find current offset position
+                current_offset = field.data_or_offset
+                current_pos = all_offsets_sorted.index(current_offset)
+
+                # Determine size
+                if current_pos < len(all_offsets_sorted) - 1:
+                    # Size is distance to next offset
+                    size = all_offsets_sorted[current_pos + 1] - current_offset
+                else:
+                    # Last field - size is to end of field data section
+                    size = self.header.field_data_count - current_offset
+
+                # Read raw data from original file
+                data = file_data[offset:offset+size]
+
+                field_data_items.append({
+                    'field_index': idx,
+                    'field': field,
+                    'label': label,
+                    'data': data,
+                    'offset': field.data_or_offset
+                })
 
         # Sort by original offset to maintain order
         field_data_items.sort(key=lambda x: x['offset'])
@@ -390,18 +593,60 @@ class Character:
             offset_map[old_offset] = new_offset
             new_field_data.extend(item['data'])
 
-        # Update field offsets in the field table
+        # Pad field_data to maintain 4-byte alignment (required by NWN:EE)
+        # The field_indices section must start at a 4-byte aligned offset
+
+        padding_needed = (4 - (len(new_field_data) % 4)) % 4
+        if padding_needed > 0:
+            new_field_data.extend(b'\x00' * padding_needed)
+
+        # Build a list of (old_start, old_end, new_start) for claimed ranges
+        # This helps map offsets that fall WITHIN a claimed range (not just at the start)
+        range_mappings = []
         for item in field_data_items:
-            field_idx = item['field_index']
-            old_offset = item['offset']
-            new_offset = offset_map[old_offset]
+            old_start = item['offset']
+            new_start = offset_map[old_start]
+            old_end = old_start + len(item['data'])
+            range_mappings.append((old_start, old_end, new_start))
 
-            # Update in the fields array
-            self.fields[field_idx].data_or_offset = new_offset
+        def get_new_offset(old_offset):
+            """Get the new offset for any old offset, including those within ranges."""
+            # First check if it's directly in offset_map
+            if old_offset in offset_map:
+                return offset_map[old_offset]
 
-            # Write the new offset to the file data (in the field table)
-            field_table_offset = self.header.field_offset + (field_idx * 12) + 8  # 12 bytes per field, offset is at byte 8
-            file_data[field_table_offset:field_table_offset+4] = new_offset.to_bytes(4, "little")
+            # Otherwise, find which range this offset falls within
+            for old_start, old_end, new_start in range_mappings:
+                if old_start <= old_offset < old_end:
+                    # Calculate offset within the range and apply to new position
+                    offset_within_range = old_offset - old_start
+                    return new_start + offset_within_range
+
+            # Offset not found in any range - this shouldn't happen
+            return old_offset
+
+        # Update field offsets in the field table for ALL fields that use field_data offsets
+        # This includes fields that share the same offset (and were skipped to avoid duplicating data)
+        # Types that use field_data section offsets:
+        # - Type 10: CExoString
+        # - Type 11: ResRef
+        # - Type 12: CExoLocString
+        # Note: Type 14 (Struct) uses struct indices, Type 15 (List) uses list_indices section
+        offset_types = {10, 11, 12}
+        for field_idx, field in enumerate(self.fields):
+            if field.type not in offset_types:
+                continue
+
+            old_offset = field.data_or_offset
+            new_offset = get_new_offset(old_offset)
+
+            if new_offset != old_offset:
+                # Update in the fields array
+                self.fields[field_idx].data_or_offset = new_offset
+
+                # Write the new offset to the file data (in the field table)
+                field_table_offset = self.header.field_offset + (field_idx * 12) + 8  # 12 bytes per field, offset is at byte 8
+                file_data[field_table_offset:field_table_offset+4] = new_offset.to_bytes(4, "little")
 
         # Replace the entire field data section
         old_field_data_start = self.header.field_data_offset
@@ -446,22 +691,75 @@ class Character:
         if self.header.list_indices_offset > 0:
             self.header.list_indices_offset += size_delta
 
-        # Update NPC data offset and value
-        if field_name in self.npc_data:
-            self.npc_data[field_name].value = new_value
-            # Find the new offset for this field
+        # CRITICAL: Update ALL npc_data locations, not just the edited field
+        # When field_data is rebuilt, ALL offsets change, so we need to update all cached locations
+        for label in self.npc_data:
             for item in field_data_items:
-                if item['label'] == field_name:
-                    self.npc_data[field_name].loc = self.header.field_data_offset + offset_map[item['offset']]
+                if item['label'] == label and self.npc_data[label].field_index == item['field_index']:
+                    new_loc = self.header.field_data_offset + offset_map[item['offset']]
+                    self.npc_data[label].loc = new_loc
+                    # Update the value for the field we just edited
+                    if label == field_name:
+                        self.npc_data[label].value = new_value
                     break
 
-    def save_string_field(self, field_name, new_value, language_id=0):
-        """Save a string field (like Description, FirstName, LastName) to the BIC file.
+        return True
+
+    def _save_cexostring(self, field_name, new_value):
+        """Save a CExoString (type 10) field like Deity.
+
+        CExoString format:
+        - 4 bytes: string length (uint32)
+        - N bytes: UTF-8 string data
 
         Args:
-            field_name: Name of the field to update (e.g., 'Description', 'FirstName')
+            field_name: Name of the field to update
             new_value: New string value
-            language_id: Language ID (0 for English)
+
+        Returns:
+            True if successful, False otherwise
+        """
+        npc_data = self.npc_data[field_name]
+
+        # Encode new value
+        new_bytes_str = new_value.encode('utf-8')
+        new_size = 4 + len(new_bytes_str)  # 4 bytes for length + string data
+
+        # Read current file and get current string size
+        offset = npc_data.loc
+        with open(self.file_name, 'rb') as f:
+            file_data = bytearray(f.read())
+            # Get current string size from file
+            f.seek(offset)
+            old_string_len = int.from_bytes(f.read(4), "little")
+
+        old_size = 4 + old_string_len
+
+        # Check if sizes match
+        if old_size == new_size:
+            # Same size: update in place
+            new_bytes = bytearray()
+            new_bytes.extend(len(new_bytes_str).to_bytes(4, "little"))
+            new_bytes.extend(new_bytes_str)
+
+            file_data[offset:offset+old_size] = new_bytes
+
+            with open(self.file_name, 'wb') as f:
+                f.write(file_data)
+
+            npc_data.value = new_value
+            return True
+        else:
+            # Different size: rebuild field data section
+            return self._rebuild_field_data_section(field_name, new_value)
+
+    def save_string_field(self, field_name, new_value, language_id=0):
+        """Save a string field (like Description, FirstName, LastName, Deity) to the BIC file.
+
+        Args:
+            field_name: Name of the field to update (e.g., 'Description', 'FirstName', 'Deity')
+            new_value: New string value
+            language_id: Language ID (0 for English, only used for CExoLocString fields)
 
         Returns:
             True if successful, False otherwise
@@ -471,18 +769,28 @@ class Character:
 
         npc_data = self.npc_data[field_name]
 
+        # Handle CExoString (type 10) fields like Deity
+        if npc_data.data_type == 10:
+            return self._save_cexostring(field_name, new_value)
+
+        # Handle CExoLocString (type 12) fields
         # Check if this field has a CExoLocString
         if npc_data.loc_string is None:
             return False
 
         # Calculate the OLD size from the actual data structure (not the stored total_size)
         # This handles cases where tools like Moneo wrote incorrect total_size fields
+        # Size = total_size field (4 bytes) + data
+        # Data = string_ref (4) + string_count (4) + strings
         old_loc_string = npc_data.loc_string
-        old_calculated_size = 12  # header (total_size + string_ref + string_count)
-        for lang_id, string in old_loc_string.strings.items():
-            old_calculated_size += 8 + len(string.encode('utf-8'))  # lang_id + str_len + data
         if old_loc_string.string_count == 0:
-            old_calculated_size = 8  # empty CExoLocString
+            # Empty: total_size field (4) + string_ref (4) = 8 bytes total
+            old_calculated_size = 4 + 4
+        else:
+            # Non-empty: total_size field (4) + string_ref (4) + string_count (4) + strings
+            old_calculated_size = 4 + 8  # total_size field + (string_ref + string_count)
+            for lang_id, string in old_loc_string.strings.items():
+                old_calculated_size += 8 + len(string.encode('utf-8'))  # lang_id + str_len + data
 
         # Update the string in the CExoLocString object
         npc_data.loc_string.set_string(new_value, language_id)

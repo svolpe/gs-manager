@@ -440,7 +440,8 @@ class Character:
                         'field': field,
                         'label': label,
                         'data': data,
-                        'offset': field.data_or_offset
+                        'offset': field.data_or_offset,
+                        'orig_size': orig_size  # Store original size for range mapping
                     })
                 else:
                     # This is a different field with the same label - preserve its original data
@@ -467,7 +468,8 @@ class Character:
                             'field': field,
                             'label': label,
                             'data': data,
-                            'offset': field.data_or_offset
+                            'offset': field.data_or_offset,
+                            'orig_size': size  # Store original size for range mapping
                         })
                     except:
                         # If we can't read it, skip this field
@@ -500,7 +502,8 @@ class Character:
                         'field': field,
                         'label': label,
                         'data': data,
-                        'offset': field.data_or_offset
+                        'offset': field.data_or_offset,
+                        'orig_size': orig_size  # Store original size for range mapping
                     })
                 else:
                     # This is a different field with the same label - preserve its original data
@@ -513,23 +516,25 @@ class Character:
 
                     offset = self.header.field_data_offset + field.data_or_offset
 
-                    # Read the CExoLocString structure properly and preserve its original total_size
+                    # CRITICAL: Copy raw bytes directly instead of decode/re-encode
+                    # Re-encoding can change the size if there are invalid UTF-8 sequences
+                    # (they become replacement characters which are 3 bytes in UTF-8)
                     try:
-                        # Open temp file handle to read with CExoLocString
-                        with open(self.file_name, 'rb') as temp_file:
-                            loc_string = CExoLocString.read_from_file(temp_file, offset)
-                            # Preserve original total_size for compatibility
-                            data = loc_string.to_bytes(preserve_total_size=True)
+                        # Read just the total_size to determine how much data to copy
+                        total_size = int.from_bytes(file_data[offset:offset+4], "little")
+                        size = 4 + total_size
+                        data = file_data[offset:offset+size]
 
-                        # Mark this byte range as claimed (use actual data length)
-                        claimed_ranges.append((field.data_or_offset, field.data_or_offset + len(data)))
+                        # Mark this byte range as claimed
+                        claimed_ranges.append((field.data_or_offset, field.data_or_offset + size))
 
                         field_data_items.append({
                             'field_index': idx,
                             'field': field,
                             'label': label,
                             'data': data,
-                            'offset': field.data_or_offset
+                            'offset': field.data_or_offset,
+                            'orig_size': size  # Store original size for range mapping
                         })
                     except:
                         # If we can't read it, skip this field
@@ -577,7 +582,8 @@ class Character:
                     'field': field,
                     'label': label,
                     'data': data,
-                    'offset': field.data_or_offset
+                    'offset': field.data_or_offset,
+                    'orig_size': size  # Store original size for range mapping
                 })
 
         # Sort by original offset to maintain order
@@ -593,20 +599,19 @@ class Character:
             offset_map[old_offset] = new_offset
             new_field_data.extend(item['data'])
 
-        # Pad field_data to maintain 4-byte alignment (required by NWN:EE)
-        # The field_indices section must start at a 4-byte aligned offset
-
-        padding_needed = (4 - (len(new_field_data) % 4)) % 4
-        if padding_needed > 0:
-            new_field_data.extend(b'\x00' * padding_needed)
+        # NOTE: We do NOT add padding for 4-byte alignment
+        # Original NWN files are sometimes aligned, sometimes not
+        # Adding artificial padding breaks NWN:EE's validation
 
         # Build a list of (old_start, old_end, new_start) for claimed ranges
         # This helps map offsets that fall WITHIN a claimed range (not just at the start)
+        # CRITICAL: Use orig_size (not len(item['data'])) to get correct old_end
+        # For edited fields, item['data'] has NEW size, but old_end must be ORIGINAL end
         range_mappings = []
         for item in field_data_items:
             old_start = item['offset']
             new_start = offset_map[old_start]
-            old_end = old_start + len(item['data'])
+            old_end = old_start + item['orig_size']  # Use ORIGINAL size, not new size!
             range_mappings.append((old_start, old_end, new_start))
 
         def get_new_offset(old_offset):

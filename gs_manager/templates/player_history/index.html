@@ -14,6 +14,7 @@
       <tr>
         <th>Player Name</th>
         <th>Logins</th>
+        <th>Last Login</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -25,6 +26,7 @@
   $(document).ready(function () {
     new DataTable('#summary', {
       ajax: '/player_history/summary/data',
+      order: [[2, 'desc']],
       columns: [
         {data: 'player_name', orderable: true, searchable: true},
         {
@@ -37,7 +39,9 @@
             }
             return data;
           }
-        }
+        },
+        {data: 'last_login', orderable: true, searchable: false,
+         type: 'date', render: DataTable.render.datetime('ddd, DD MMM YYYY h:mm:ss a', 'en')}
       ]
     });
   });

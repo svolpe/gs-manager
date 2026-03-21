@@ -23,13 +23,21 @@ def summary_data():
     rows = (
         db.session.query(
             PcActiveLog.player_name,
-            func.count(PcActiveLog.id).label('login_count')
+            func.count(PcActiveLog.id).label('login_count'),
+            func.max(PcActiveLog.logon_time).label('last_login')
         )
         .filter(PcActiveLog.logoff_time.isnot(None))
         .group_by(PcActiveLog.player_name)
         .all()
     )
-    return {'data': [{'player_name': r.player_name, 'login_count': r.login_count} for r in rows]}
+    return {'data': [
+        {
+            'player_name': r.player_name,
+            'login_count': r.login_count,
+            'last_login': r.last_login,
+        }
+        for r in rows
+    ]}
 
 
 @ph.route('/player_history/list')

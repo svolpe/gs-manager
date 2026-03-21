@@ -43,8 +43,11 @@ class CExoLocString:
         loc_string.total_size = int.from_bytes(file.read(4), "little")
         loc_string.string_ref = int.from_bytes(file.read(4), "little", signed=True)
 
-        # Check if this is an empty CExoLocString (only 8 bytes: total_size + string_ref)
-        if loc_string.total_size == 8:
+        # Per GFF spec, total_size is bytes of data after the total_size DWORD itself.
+        # Minimum is 4 (just string_ref, no string_count) or 8 (string_ref + string_count=0).
+        # If total_size <= 4, there's no string_count field at all.
+        # If total_size == 8, there's string_count but it must be 0 (no room for strings).
+        if loc_string.total_size <= 8:
             loc_string.string_count = 0
             return loc_string
 
@@ -101,9 +104,9 @@ class CExoLocString:
         Per GFF spec, total_size is the size of data AFTER the total_size field itself.
         """
         if self.string_count == 0:
-            # Empty CExoLocString: total_size excludes itself, so just string_ref = 4 bytes
-            # (string_count is not written when empty)
-            self.total_size = 4
+            # Empty CExoLocString: string_ref (4) + string_count (4) = 8 bytes
+            # This matches the standard NWN format where string_count=0 is always written
+            self.total_size = 8
         else:
             # string_ref (4) + string_count (4) = 8 bytes base
             size = 8
@@ -127,16 +130,14 @@ class CExoLocString:
         data.extend(self.total_size.to_bytes(4, "little"))
         data.extend(self.string_ref.to_bytes(4, "little", signed=True))
 
-        # Write string_count if total_size > 4 (format includes it) OR if there are strings
-        # This handles empty CExoLocStrings that still have string_count=0 in the file
-        if self.total_size > 4 or self.string_count > 0:
-            data.extend(self.string_count.to_bytes(4, "little"))
+        # Always write string_count (standard NWN format includes it even when 0)
+        data.extend(self.string_count.to_bytes(4, "little"))
 
-            for language_id, string in self.strings.items():
-                string_bytes = string.encode('utf-8')
-                data.extend(language_id.to_bytes(4, "little"))
-                data.extend(len(string_bytes).to_bytes(4, "little"))
-                data.extend(string_bytes)
+        for language_id, string in self.strings.items():
+            string_bytes = string.encode('utf-8')
+            data.extend(language_id.to_bytes(4, "little"))
+            data.extend(len(string_bytes).to_bytes(4, "little"))
+            data.extend(string_bytes)
 
         return bytes(data)
 
@@ -541,7 +542,7 @@ class Character:
                         continue
 
             # For all other types that use field data section (6, 7, 9, 11, 13)
-            # Read their data as-is from the original file
+            # Read their data as-is from the original file using known sizes per GFF spec
             elif field.type in [6, 7, 9, 11, 13]:
                 # Skip if we've already processed this offset (multiple fields can share same data)
                 if field.data_or_offset in processed_offsets:
@@ -556,26 +557,24 @@ class Character:
 
                 offset = self.header.field_data_offset + field.data_or_offset
 
-                # Determine the size by finding the next field's offset or end of section
-                # Find all offsets in this section (only types that actually use field_data)
-                field_data_types = {6, 7, 9, 10, 11, 12, 13}
-                all_offsets = [f.data_or_offset for f in self.fields if f.type in field_data_types]
-                all_offsets_sorted = sorted(set(all_offsets))
-
-                # Find current offset position
-                current_offset = field.data_or_offset
-                current_pos = all_offsets_sorted.index(current_offset)
-
-                # Determine size
-                if current_pos < len(all_offsets_sorted) - 1:
-                    # Size is distance to next offset
-                    size = all_offsets_sorted[current_pos + 1] - current_offset
-                else:
-                    # Last field - size is to end of field data section
-                    size = self.header.field_data_count - current_offset
+                # Determine size based on type (per GFF spec)
+                if field.type in [6, 7, 9]:
+                    # DWORD64, INT64, DOUBLE: always 8 bytes
+                    size = 8
+                elif field.type == 11:
+                    # CResRef: 1 byte (size, max 16) + N bytes (characters)
+                    size_byte = file_data[offset]
+                    size = 1 + size_byte
+                elif field.type == 13:
+                    # VOID: 4 bytes (size DWORD) + N bytes (data)
+                    void_size = int.from_bytes(file_data[offset:offset+4], "little")
+                    size = 4 + void_size
 
                 # Read raw data from original file
                 data = file_data[offset:offset+size]
+
+                # Mark this byte range as claimed
+                claimed_ranges.append((field.data_or_offset, field.data_or_offset + size))
 
                 field_data_items.append({
                     'field_index': idx,
@@ -632,12 +631,11 @@ class Character:
 
         # Update field offsets in the field table for ALL fields that use field_data offsets
         # This includes fields that share the same offset (and were skipped to avoid duplicating data)
-        # Types that use field_data section offsets:
-        # - Type 10: CExoString
-        # - Type 11: ResRef
-        # - Type 12: CExoLocString
+        # All complex types per GFF spec (data stored in field data block):
+        # - Type 6: DWORD64, Type 7: INT64, Type 9: DOUBLE
+        # - Type 10: CExoString, Type 11: CResRef, Type 12: CExoLocString, Type 13: VOID
         # Note: Type 14 (Struct) uses struct indices, Type 15 (List) uses list_indices section
-        offset_types = {10, 11, 12}
+        offset_types = {6, 7, 9, 10, 11, 12, 13}
         for field_idx, field in enumerate(self.fields):
             if field.type not in offset_types:
                 continue
@@ -783,19 +781,14 @@ class Character:
         if npc_data.loc_string is None:
             return False
 
-        # Calculate the OLD size from the actual data structure (not the stored total_size)
-        # This handles cases where tools like Moneo wrote incorrect total_size fields
-        # Size = total_size field (4 bytes) + data
-        # Data = string_ref (4) + string_count (4) + strings
-        old_loc_string = npc_data.loc_string
-        if old_loc_string.string_count == 0:
-            # Empty: total_size field (4) + string_ref (4) = 8 bytes total
-            old_calculated_size = 4 + 4
-        else:
-            # Non-empty: total_size field (4) + string_ref (4) + string_count (4) + strings
-            old_calculated_size = 4 + 8  # total_size field + (string_ref + string_count)
-            for lang_id, string in old_loc_string.strings.items():
-                old_calculated_size += 8 + len(string.encode('utf-8'))  # lang_id + str_len + data
+        # Read the OLD size directly from the file's total_size field
+        # Per GFF spec: on-disk size = 4 (total_size DWORD) + total_size (bytes of data)
+        # Reading from file is more reliable than calculating from in-memory data,
+        # which can differ if tools like Moneo wrote non-standard total_size values
+        with open(self.file_name, 'rb') as f:
+            f.seek(npc_data.loc)
+            old_total_size = int.from_bytes(f.read(4), "little")
+        old_calculated_size = 4 + old_total_size
 
         # Update the string in the CExoLocString object
         npc_data.loc_string.set_string(new_value, language_id)

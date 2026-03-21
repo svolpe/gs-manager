@@ -132,7 +132,7 @@ class CharacterService:
     @staticmethod
     def get_character_level(cd_key, character_name, server_name):
         """
-        Quick method to get just the character level.
+        Get the total character level (sum of all class levels).
 
         Args:
             cd_key (str): Character's CD key
@@ -140,14 +140,44 @@ class CharacterService:
             server_name (str): Name of the server
 
         Returns:
-            int: Character level, or None if not found
+            int: Total character level, or None if not found
         """
-        data = CharacterService.load_character_data(cd_key, character_name, server_name, fields=['ClassLevel'])
+        if character_name.lower() == 'no character':
+            return None
 
-        if data and 'ClassLevel' in data:
-            return data['ClassLevel']
+        servervault_path = CharacterService.get_servervault_path(server_name)
+        if not servervault_path:
+            return None
 
-        return None
+        filename = character_name.lower().replace(' ', '')
+        char_file = os.path.join(servervault_path, cd_key, f"{filename}.bic")
+        if not os.path.exists(char_file):
+            return None
+
+        try:
+            char = Character()
+            char.load_file(char_file)
+
+            # ClassLevel appears once per class entry in the ClassList struct.
+            # npc_data only keeps the first occurrence, so we must sum all
+            # matching fields from the raw fields list directly.
+            class_level_label_idx = next(
+                (i for i, lbl in enumerate(char.labels) if lbl == 'ClassLevel'),
+                None
+            )
+            if class_level_label_idx is None:
+                return None
+
+            total = sum(
+                f.data_or_offset
+                for f in char.fields
+                if f.label_index == class_level_label_idx
+            )
+            return total if total > 0 else None
+
+        except Exception as e:
+            print(f"Error loading character {cd_key} from {server_name}: {e}")
+            return None
 
     @staticmethod
     def get_character_summary(cd_key, character_name, server_name):

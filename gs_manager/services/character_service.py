@@ -118,15 +118,14 @@ class CharacterService:
 
             for field_name in fields:
                 if field_name == 'ClassLevel':
-                    # npc_data only keeps the first class entry; sum across all classes
-                    class_level_idx = next(
-                        (i for i, lbl in enumerate(char.labels) if lbl == 'ClassLevel'),
-                        None
-                    )
-                    if class_level_idx is not None:
+                    # npc_data only keeps the first class entry; use its field_index
+                    # to find the shared label_index, then sum all fields with that index.
+                    if 'ClassLevel' in char.npc_data:
+                        first_field = char.fields[char.npc_data['ClassLevel'].field_index]
+                        lbl_idx = first_field.label_index
                         result['ClassLevel'] = sum(
                             f.data_or_offset for f in char.fields
-                            if f.label_index == class_level_idx
+                            if f.label_index == lbl_idx
                         ) or None
                     else:
                         result['ClassLevel'] = None

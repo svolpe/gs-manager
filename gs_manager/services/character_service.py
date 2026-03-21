@@ -5,7 +5,9 @@ This service allows fetching character sheet data from servervault directories
 across the application.
 """
 
+import glob
 import os
+import re
 from ..extensions import db
 from ..models.server_nwn import ServerConfigs, ServerVolumes, VolumesDirs
 from ..tools.nwn_editors.character_editor import Character
@@ -54,6 +56,39 @@ class CharacterService:
         return None
 
     @staticmethod
+    def _find_bic_file(servervault_path, cd_key, character_name):
+        """
+        Locate a player's BIC file given their (possibly server-modified) display name.
+
+        NWN BIC filenames are set at character creation from the original first+last
+        name.  Server scripts can append titles, clan tags, etc. to the display name
+        stored in PcActiveLog without renaming the file.  We therefore:
+          1. Try an exact match on the cleaned display name.
+          2. Scan the player's directory and return the BIC whose stem is the longest
+             prefix of the cleaned display name (servers always append, never prepend).
+        """
+        # Strip everything that can't appear in a filename: keep only a-z and 0-9
+        cleaned = re.sub(r'[^a-z0-9]', '', character_name.lower())
+
+        player_dir = os.path.join(servervault_path, cd_key)
+        if not os.path.isdir(player_dir):
+            return None
+
+        # Exact match first
+        exact = os.path.join(player_dir, f"{cleaned}.bic")
+        if os.path.exists(exact):
+            return exact
+
+        # Prefix scan — longest stem that is a prefix of the cleaned name wins
+        best_path, best_len = None, 0
+        for path in glob.glob(os.path.join(player_dir, "*.bic")):
+            stem = os.path.basename(path)[:-4]
+            if cleaned.startswith(stem) and len(stem) > best_len:
+                best_path, best_len = path, len(stem)
+
+        return best_path
+
+    @staticmethod
     def load_character_data(cd_key, character_name, server_name, fields=None):
         """
         Load character data from a BIC file.
@@ -99,13 +134,8 @@ class CharacterService:
         if not servervault_path:
             return None
 
-        # Convert character name to filename format: lowercase and remove spaces
-        filename = character_name.lower().replace(' ', '')
-
-        # Construct full path to character file: servervault/CD_KEY/charactername.bic
-        char_file = os.path.join(servervault_path, cd_key, f"{filename}.bic")
-
-        if not os.path.exists(char_file):
+        char_file = CharacterService._find_bic_file(servervault_path, cd_key, character_name)
+        if not char_file:
             return None
 
         # Load character

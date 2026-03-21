@@ -814,6 +814,54 @@ class Character:
             self._rebuild_field_data_section(field_name, new_value, language_id)
             return True
 
+    def save_int_field(self, field_name, new_value):
+        """Save an inline integer field (BYTE, CHAR, WORD, SHORT, DWORD, INT) to the BIC file.
+
+        Inline types are stored directly in the 4-byte data_or_offset slot of the
+        field array entry.  Their position in the file is:
+            header.field_offset + (field_index * 12) + 8
+
+        Supported GFF types:
+            0  BYTE   unsigned 8-bit   (0-255)
+            1  CHAR   signed 8-bit     (-128 to 127)
+            2  WORD   unsigned 16-bit  (0-65535)
+            3  SHORT  signed 16-bit    (-32768 to 32767)
+            4  DWORD  unsigned 32-bit
+            5  INT    signed 32-bit    (Age uses this)
+
+        Args:
+            field_name: Name of the field to update (e.g. 'Age')
+            new_value:  New integer value
+
+        Returns:
+            True if successful, False otherwise
+        """
+        INLINE_TYPES = {0, 1, 2, 3, 4, 5}
+
+        if field_name not in self.npc_data:
+            return False
+
+        npc_data = self.npc_data[field_name]
+
+        if npc_data.data_type not in INLINE_TYPES:
+            return False
+
+        signed = npc_data.data_type in {1, 3, 5}
+
+        # Inline value lives in the data_or_offset slot of the field array entry.
+        # Each field entry is 12 bytes: [type 4B][label_index 4B][data_or_offset 4B]
+        file_offset = self.header.field_offset + (npc_data.field_index * 12) + 8
+
+        try:
+            with open(self.file_name, 'r+b') as f:
+                f.seek(file_offset)
+                f.write(new_value.to_bytes(4, 'little', signed=signed))
+            npc_data.value = new_value
+            return True
+        except Exception as e:
+            print(f"Error saving {field_name}: {e}")
+            return False
+
     def save_description(self, new_description):
         """Convenience method to save the character description.
 

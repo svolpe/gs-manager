@@ -190,6 +190,43 @@ class CharacterService:
         return None
 
     @staticmethod
+    def save_character_age(cd_key, character_name, server_name, new_age):
+        """
+        Save a new age value to a character's BIC file.
+
+        Args:
+            cd_key (str): Character's CD key
+            character_name (str): Character's name
+            server_name (str): Name of the server
+            new_age (int): New age value (must be a non-negative integer)
+
+        Returns:
+            True if successful, False otherwise
+        """
+        if not isinstance(new_age, int) or new_age < 0:
+            return False
+
+        if character_name.lower() == 'no character':
+            return False
+
+        servervault_path = CharacterService.get_servervault_path(server_name)
+        if not servervault_path:
+            return False
+
+        char_file = CharacterService._find_bic_file(servervault_path, cd_key, character_name)
+        if not char_file:
+            return False
+
+        try:
+            char = Character()
+            char.load_file(char_file)
+            char.file_name = char_file
+            return char.save_int_field('Age', new_age)
+        except Exception as e:
+            print(f"Error saving age for {cd_key} on {server_name}: {e}")
+            return False
+
+    @staticmethod
     def get_character_summary(cd_key, character_name, server_name):
         """
         Get a summary of character information suitable for display lists.

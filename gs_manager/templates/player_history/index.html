@@ -5,110 +5,40 @@
 {% endblock %}
 
 {% block content %}
-<div class="row-1"></class>
+<div class="row-1">
+  <a href="{{ url_for('player_history.list_view') }}">View full login list</a>
+</div>
 <div class="row-2">
-<table>
-  <tbody><tr>
-      <td>Minimum Logged on date:</td>
-      <td><input type="text" id="min" name="min"></td>
-  </tr>
-  <tr>
-      <td>Maximum Logged on date:</td>
-      <td><input type="text" id="max" name="max"></td>
-  </tr>
-</tbody></table>
-  <table id="data" class="table table-striped player_hist">
+  <table id="summary" class="table table-striped">
     <thead>
       <tr>
         <th>Player Name</th>
-        <th>Character Name</th>
-        <th>Server Name</th>
-        <th>Logged on</th>
-        <th>Logged off</th>
+        <th>Logins</th>
       </tr>
     </thead>
-    <tbody>
-      <a class="player_hist"> 
-        <tr>
-          <th>Player Name</th>
-          <td>character_name</td>
-          <td>server_name</td>
-          <td>logon_time</td>
-          <td>logoff_time</td>
-        </tr>
-      </a>
-    </tbody>
+    <tbody></tbody>
   </table>
 </div>
 {% endblock %}
 {% block scripts %}
 <script>
-  
   $(document).ready(function () {
-    let minDate, maxDate;
-    // Custom filtering function which will search data in column four between two values
-    DataTable.ext.search.push(function (settings, data, dataIndex) {
-        let min = minDate.val();
-        let max = maxDate.val();
-        let date = new Date(data[3]);
-    
-        if (
-            (min === null && max === null) ||
-            (min === null && date <= max) ||
-            (min <= date && max === null) ||
-            (min <= date && date <= max)
-        ) {
-            return true;
-        }
-        return false;
-    });
-    // Create date inputs
-    minDate = new DateTime('#min', {
-        format: 'MMMM Do YYYY'
-    });
-    maxDate = new DateTime('#max', {
-        format: 'MMMM Do YYYY'
-    });
-
-    var table = new DataTable('#data',{
-      ajax: '/player_history/data',
-      layout: {
-          top: { 
-              searchPanes: {
-              viewTotal: true
-          }
-        }
-      },
+    new DataTable('#summary', {
+      ajax: '/player_history/summary/data',
       columns: [
         {data: 'player_name', orderable: true, searchable: true},
-        {data: 'character_name', orderable: true, searchable: true},
-        {data: 'server_name', orderable: true, searchable: true},
-        {data: 'logon_time', orderable: true, searchable: true},
-        {data: 'logoff_time', orderable: true, searchable: true}
-      ],
-      columnDefs: [ //Sun, 10 Nov 2024 08:33:52 GMT	 'ddd, DD MMM YYYY HH:mm:ss GMT','Do DD MMM YYYY'
-        {type:  'date', targets: 3, render: DataTable.render.datetime('ddd, DD MMM YYYY h:mm:ss a', 'en')},
-        {type:  'date', targets: 4, render: DataTable.render.datetime('ddd, DD MMM YYYY h:mm:ss a', 'en')},
         {
-            searchPanes:{
-                initCollapsed: true,   
-                show: true,
-            },
-            targets: [0, 2]
-        },
-        {
-            searchPanes:{
-                show: false,
-            },
-            targets: [1,3,4]
-        },
-  
-      ],
-    });
-    
-    // Refilter the table
-    document.querySelectorAll('#min, #max').forEach((el) => {
-        el.addEventListener('change', () => table.draw());
+          data: 'login_count',
+          orderable: true,
+          searchable: false,
+          render: function (data, type, row) {
+            if (type === 'display') {
+              return '<a href="/player_history/player/' + encodeURIComponent(row.player_name) + '">' + data + '</a>';
+            }
+            return data;
+          }
+        }
+      ]
     });
   });
 </script>

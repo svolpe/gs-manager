@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  {% block title %}Player History - Full List{% endblock %}
+{% endblock %}
+
+{% block content %}
+<div class="row-1">
+  <a href="{{ url_for('player_history.index') }}">&larr; Back to summary</a>
+</div>
+<div class="row-2">
+<table>
+  <tbody><tr>
+      <td>Minimum Logged on date:</td>
+      <td><input type="text" id="min" name="min"></td>
+  </tr>
+  <tr>
+      <td>Maximum Logged on date:</td>
+      <td><input type="text" id="max" name="max"></td>
+  </tr>
+</tbody></table>
+  <table id="data" class="table table-striped player_hist">
+    <thead>
+      <tr>
+        <th>Player Name</th>
+        <th>Character Name</th>
+        <th>Server Name</th>
+        <th>Logged on</th>
+        <th>Logged off</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+
+  $(document).ready(function () {
+    let minDate, maxDate;
+    // Custom filtering function which will search data in column four between two values
+    DataTable.ext.search.push(function (settings, data, dataIndex) {
+        let min = minDate.val();
+        let max = maxDate.val();
+        let date = new Date(data[3]);
+
+        if (
+            (min === null && max === null) ||
+            (min === null && date <= max) ||
+            (min <= date && max === null) ||
+            (min <= date && date <= max)
+        ) {
+            return true;
+        }
+        return false;
+    });
+    // Create date inputs
+    minDate = new DateTime('#min', {
+        format: 'MMMM Do YYYY'
+    });
+    maxDate = new DateTime('#max', {
+        format: 'MMMM Do YYYY'
+    });
+
+    var table = new DataTable('#data',{
+      ajax: '/player_history/data',
+      layout: {
+          top: {
+              searchPanes: {
+              viewTotal: true
+          }
+        }
+      },
+      columns: [
+        {data: 'player_name', orderable: true, searchable: true},
+        {data: 'character_name', orderable: true, searchable: true},
+        {data: 'server_name', orderable: true, searchable: true},
+        {data: 'logon_time', orderable: true, searchable: true},
+        {data: 'logoff_time', orderable: true, searchable: true}
+      ],
+      columnDefs: [
+        {type:  'date', targets: 3, render: DataTable.render.datetime('ddd, DD MMM YYYY h:mm:ss a', 'en')},
+        {type:  'date', targets: 4, render: DataTable.render.datetime('ddd, DD MMM YYYY h:mm:ss a', 'en')},
+        {
+            searchPanes:{
+                initCollapsed: true,
+                show: true,
+            },
+            targets: [0, 2]
+        },
+        {
+            searchPanes:{
+                show: false,
+            },
+            targets: [1,3,4]
+        },
+
+      ],
+    });
+
+    // Refilter the table
+    document.querySelectorAll('#min, #max').forEach((el) => {
+        el.addEventListener('change', () => table.draw());
+    });
+  });
+</script>
+{% endblock %}

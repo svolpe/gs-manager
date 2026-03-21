@@ -117,7 +117,20 @@ class CharacterService:
             result = {'cd_key': cd_key}
 
             for field_name in fields:
-                if field_name in char.npc_data:
+                if field_name == 'ClassLevel':
+                    # npc_data only keeps the first class entry; sum across all classes
+                    class_level_idx = next(
+                        (i for i, lbl in enumerate(char.labels) if lbl == 'ClassLevel'),
+                        None
+                    )
+                    if class_level_idx is not None:
+                        result['ClassLevel'] = sum(
+                            f.data_or_offset for f in char.fields
+                            if f.label_index == class_level_idx
+                        ) or None
+                    else:
+                        result['ClassLevel'] = None
+                elif field_name in char.npc_data:
                     result[field_name] = char.npc_data[field_name].value
                 else:
                     result[field_name] = None
@@ -142,42 +155,10 @@ class CharacterService:
         Returns:
             int: Total character level, or None if not found
         """
-        if character_name.lower() == 'no character':
-            return None
-
-        servervault_path = CharacterService.get_servervault_path(server_name)
-        if not servervault_path:
-            return None
-
-        filename = character_name.lower().replace(' ', '')
-        char_file = os.path.join(servervault_path, cd_key, f"{filename}.bic")
-        if not os.path.exists(char_file):
-            return None
-
-        try:
-            char = Character()
-            char.load_file(char_file)
-
-            # ClassLevel appears once per class entry in the ClassList struct.
-            # npc_data only keeps the first occurrence, so we must sum all
-            # matching fields from the raw fields list directly.
-            class_level_label_idx = next(
-                (i for i, lbl in enumerate(char.labels) if lbl == 'ClassLevel'),
-                None
-            )
-            if class_level_label_idx is None:
-                return None
-
-            total = sum(
-                f.data_or_offset
-                for f in char.fields
-                if f.label_index == class_level_label_idx
-            )
-            return total if total > 0 else None
-
-        except Exception as e:
-            print(f"Error loading character {cd_key} from {server_name}: {e}")
-            return None
+        data = CharacterService.load_character_data(cd_key, character_name, server_name, fields=['ClassLevel'])
+        if data and 'ClassLevel' in data:
+            return data['ClassLevel']
+        return None
 
     @staticmethod
     def get_character_summary(cd_key, character_name, server_name):

@@ -22,6 +22,7 @@
       <tr>
         <th>Player Name</th>
         <th>Character Name</th>
+        <th>Vault</th>
         <th>Server Name</th>
         <th>Logged on</th>
         <th>Logged off</th>
@@ -82,6 +83,17 @@
       columns: [
         {data: 'player_name', orderable: true, searchable: true},
         {data: 'character_name', orderable: true, searchable: true},
+        {
+          data: 'vault_url',
+          orderable: true,
+          searchable: false,
+          render: function(data, type, row) {
+            if (data) {
+              return `<a href="${data}" class="btn btn-sm btn-info" target="_blank">View Vault</a>`;
+            }
+            return '<span class="text-muted">-</span>';
+          }
+        },
         {data: 'server_name', orderable: true, searchable: true},
         {data: 'logon_time', orderable: true, searchable: true},
         {data: 'logoff_time', orderable: true, searchable: true}
@@ -94,13 +106,13 @@
                 initCollapsed: true,   
                 show: true,
             },
-            targets: [0, 2]
+            targets: [0, 3]
         },
         {
             searchPanes:{
                 show: false,
             },
-            targets: [1,3,4]
+            targets: [1,2,4,5]
         },
   
       ],

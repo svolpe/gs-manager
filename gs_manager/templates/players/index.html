@@ -10,6 +10,7 @@
             <th>ID</th>
             <th>Character Name</th>
             <th>Player Name</th>
+            <th>Vault</th>
             <th>Level</th>
             <th>Server Name</th>
             <th>Log On Time</th>
@@ -35,6 +36,15 @@
         { data: "id"},
         { data: "player_name"},
         { data: "character_name"},
+        {
+          data: "vault_url",
+          render: function(data, type, row) {
+            if (data) {
+              return `<a href="${data}" class="btn btn-sm btn-info" target="_blank">View Vault</a>`;
+            }
+            return '<span class="text-muted">-</span>';
+          }
+        },
         { data: "character_level", className: "dt-center"},
         { data: "server_name"},
         { data: "logon_time"},

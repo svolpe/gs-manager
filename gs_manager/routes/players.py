@@ -6,14 +6,22 @@ from werkzeug.exceptions import abort
 from ..routes.auth import login_required
 from sqlalchemy import (delete, insert)
 from ..extensions import db
-from ..models.server_nwn import PcActiveLog
+from ..models.server_nwn import PcActiveLog, ServerConfigs, ServerVolumes, VolumesDirs
 from sqlalchemy import null
 from .. import socketio
 from flask_socketio import emit
 from flask import request
 from ..services.character_service import CharacterService
+import os
 
 pc = Blueprint('players', __name__)
+
+
+from ..services.character_service import CharacterService
+from .vault_utils import get_vault_url
+
+
+
 
 def get_active_players():
     query = (PcActiveLog.query.with_entities(
@@ -32,6 +40,9 @@ def get_active_players():
             record['server_name']
         )
         record['character_level'] = char_level if char_level is not None else 'N/A'
+
+        # Generate vault URL
+        record['vault_url'] = get_vault_url(record['server_name'], record['cd_key'])
 
         data.append(record)
     return data

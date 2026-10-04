@@ -35,7 +35,7 @@ class ServerConfiguration(FlaskForm):
     public_server = SelectField("Public Server", choices=[(0, 'Not Public'), (1, 'Public')],
                                 validators=[InputRequired()])
     reload_when_empty = RadioField('Reload When Empty', choices=[(1, 'Yes'), (0, 'No')], validators=[InputRequired()])
-    image = StringField("Docker Image (blank for default)", render_kw={"placeholder": "nwnxee/unified"})
+    image = SelectField("Docker Image", choices=[('', 'Default')])
     volumes = SelectMultipleField()
     database = RadioField('Use SQL Database?', choices=[('yes', 'Yes'), ('no', 'No')], validators=[InputRequired()])
     is_active = RadioField('Server Activate?', choices=[(1, 'Yes'), (0, 'No')], validators=[InputRequired()])

@@ -19,6 +19,22 @@ from flask import request
 
 sc = Blueprint('server_config', __name__)
 
+
+def image_choices(current=None):
+    """Dropdown choices for the docker image field: default, locally installed images, and the saved value."""
+    tags = []
+    try:
+        import docker
+        for img in docker.from_env().images.list():
+            tags.extend(img.tags)
+    except Exception as e:
+        flash("Could not list docker images: {0}".format(e))
+    tags = sorted(set(tags))
+    # Keep a saved image selectable even if it is no longer installed
+    if current and current not in tags:
+        tags.append(current)
+    return [('', 'Default')] + [(t, t) for t in tags]
+
 """The best way to move forward (for now) is to have a route that will start all active backends and one to 
     list all active members. There should also be a background job tht 
 """
@@ -180,6 +196,7 @@ def get_statuses():
 @sc.route('/create', methods=('GET', 'POST'))
 def create():
     form = ServerConfiguration()
+    form.image.choices = image_choices()
 
     volumes = db.session.query(VolumesInfo.id, VolumesInfo.name).all()
 
@@ -229,6 +246,7 @@ def update(id):
         abort(404, "Post id {0} doesn't exist.".format(id))
 
     form = ServerConfiguration()
+    form.image.choices = image_choices(server_cfg.image)
 
     # Load values for volume list
     volumes = db.session.query(VolumesInfo.id, VolumesInfo.name).all()

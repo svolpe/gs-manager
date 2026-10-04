@@ -77,21 +77,22 @@ def handle_logins(new_logins):
             "JOIN discord_channel_server cs ON cs.channel_id = c.id "
             "WHERE c.enabled = 1 AND cs.server_cfg_id = ? AND ("
             "  EXISTS (SELECT 1 FROM discord_watched_player wp "
-            "          WHERE wp.channel_id = c.id AND wp.player_name = ?) "
+            "          WHERE wp.channel_id = c.id AND wp.cd_key = ?) "
             "  OR EXISTS (SELECT 1 FROM discord_channel_group cg "
             "             JOIN discord_player_group_member m ON m.group_id = cg.group_id "
-            "             WHERE cg.channel_id = c.id AND m.player_name = ?))",
-            (login['server_cfg_id'], login['player_name'], login['player_name']))
+            "             WHERE cg.channel_id = c.id AND m.cd_key = ?))",
+            (login['server_cfg_id'], login['cd_key'], login['cd_key']))
         for ch in channels:
             group = db.sql_query("SELECT server_cfg_id FROM discord_channel_server WHERE channel_id = ?", (ch['id'],))
             docker_names = ['nwn_' + str(g['server_cfg_id']) for g in group]
             marks = ','.join('?' * len(docker_names))
             cutoff = f"-{int(ch['cooldown_minutes'])} minutes"
-            # Suppress if the player is already online elsewhere in the group, or was online there recently
+            # Suppress if this key was online anywhere in the group within the cooldown (server hops, false
+            # logout/login pairs). A key only ever has one open session, so the just-inserted row can't match.
             recent = db.sql_query(
-                f"SELECT 1 FROM pc_active_log WHERE player_name = ? AND docker_name IN ({marks}) "
-                "AND ((logoff_time IS NULL AND cd_key != ?) OR logoff_time >= datetime('now', ?)) LIMIT 1",
-                (login['player_name'], *docker_names, login['cd_key'], cutoff))
+                f"SELECT 1 FROM pc_active_log WHERE cd_key = ? AND docker_name IN ({marks}) "
+                "AND logoff_time >= datetime('now', ?) LIMIT 1",
+                (login['cd_key'], *docker_names, cutoff))
             if recent:
                 continue
             content = (f"\U0001F7E2 **{_escape(login['player_name'])}** is online as "

@@ -6,6 +6,7 @@ from .models.users import User
 from .models.blog import Post
 from .models.server_nwn import (ServerConfigs, ServerCmds, PcActiveLog, VolumesInfo, VolumesDirs, ServerVolumes,
                                 ServerStatus)
+from .models.discord import migrate_watch_lists_to_cd_key
 from .models.discord import DiscordChannel, DiscordChannelServer, DiscordWatchedPlayer, DiscordNotifyLog, \
                              DiscordPlayerGroup, DiscordPlayerGroupMember, DiscordChannelGroup
 from flask import Flask, render_template
@@ -53,6 +54,7 @@ def create_app(test_config=None):
     migrate.init_app(app, db)
     with app.app_context():
         db.create_all()
+        migrate_watch_lists_to_cd_key()
         # create_all() doesn't alter existing tables, so add columns introduced later
         cols = [row[1] for row in db.session.execute(db.text("PRAGMA table_info(server_configs)"))]
         if cols and 'image' not in cols:

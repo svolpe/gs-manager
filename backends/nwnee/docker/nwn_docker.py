@@ -36,7 +36,8 @@ class NwnServer:
             # Remove old container before creating new one
             if 'Status' in state:
                 if state['Status'] == 'running':
-                    self.client.stop(container)
+                    # The container is about to be replaced, so don't wait the default 10s for a graceful exit
+                    self.client.stop(container, timeout=1)
                 self.client.remove_container(container)
 
     def create_container(self):

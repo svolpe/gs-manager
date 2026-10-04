@@ -12,6 +12,11 @@
              font-family: monospace; font-size: 12px; background: #111; color: #ddd; }
   #log_out.error { color: #f88; }
   #log_status { font-size: 12px; opacity: 0.8; }
+  .log-levels { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 8px; font-size: 13px; }
+  .log-levels .cnt { opacity: 0.7; }
+  #log_out .l-error { color: #ff6b6b; }
+  #log_out .l-warning { color: #f5c542; }
+  #log_out .l-connection { color: #6bc5ff; }
 </style>
 <div class="log-controls">
   <select id="log_type">
@@ -33,6 +38,14 @@
   <input type="text" id="log_filter" placeholder="Filter lines">
   <button type="button" id="log_download">Download</button>
 </div>
+<div class="log-levels" id="log_levels">
+  <span>Only show:</span>
+  <label><input type="checkbox" value="error"> Errors <span class="cnt" data-cnt="error"></span></label>
+  <label><input type="checkbox" value="warning"> Warnings <span class="cnt" data-cnt="warning"></span></label>
+  <label><input type="checkbox" value="connection"> Player connections <span class="cnt" data-cnt="connection"></span></label>
+  <button type="button" id="log_only_problems">Errors + warnings only</button>
+  <button type="button" id="log_all_levels">Show everything</button>
+</div>
 <div id="log_status"></div>
 <pre id="log_out"></pre>
 {% endblock %}
@@ -49,15 +62,76 @@
     function store(key, val) { try { localStorage.setItem('logs_' + key, val); } catch (e) {} }
     function load(key) { try { return localStorage.getItem('logs_' + key); } catch (e) { return null; } }
 
+    // Lines are sorted into categories by keyword, and a line can match several. With no box ticked every line is
+    // shown; ticking boxes narrows the view to lines in any ticked category.
+    var PATTERNS = {
+      error: /\b(error|errors|exception|traceback|fatal|critical|crit|failed|failure|panic|segfault|conflict|denied|refused|timed out|timeout|oom|killed)\b/i,
+      warning: /\b(warn|warning|warnings|deprecated|retry|retrying)\b/i,
+      connection: /\b(login|logout|logged (in|on|off)|connect(ed|ion)?|disconnect(ed)?|joined|left the|kicked|banned)\b/i
+    };
+    // A row of the periodic "status" player table, e.g. "<time> 1 | Name | 10.0.0.5 | Character | KEY".
+    // The header row ("ID | Player Name | ...") has no numeric id, so empty polls don't match.
+    var PLAYER_ROW = /(^|\s)\d+\s*\|\s*\S/;
+    var CATEGORIES = ['error', 'warning', 'connection'];
+    var TRACE_END = /\b[\w.]*(Error|Exception)\b.*:/;
+
+    function classify(lines) {
+      var cats = [], inTrace = false;
+      lines.forEach(function (line) {
+        var c = [];
+        if (inTrace) {
+          // Everything in a python traceback counts as an error, up to and including the exception line
+          c.push('error');
+          if (TRACE_END.test(line) && !/Traceback/.test(line)) inTrace = false;
+        } else {
+          if (/Traceback \(most recent call last\)/.test(line)) { inTrace = true; c.push('error'); }
+          ['error', 'warning', 'connection'].forEach(function (k) {
+            if (c.indexOf(k) === -1 && PATTERNS[k].test(line)) c.push(k);
+          });
+          if (c.indexOf('connection') === -1 && PLAYER_ROW.test(line)) c.push('connection');
+        }
+        cats.push(c);
+      });
+      return cats;
+    }
+
+    function enabledCategories() {
+      var on = {};
+      $('#log_levels input:checked').each(function () { on[this.value] = true; });
+      return on;
+    }
+
     function render() {
       var f = $('#log_filter').val().toLowerCase();
-      var text = raw;
-      if (f) {
-        text = raw.split('\n').filter(function (l) { return l.toLowerCase().indexOf(f) !== -1; }).join('\n');
-      }
+      var on = enabledCategories();
+      var lines = raw.split('\n');
+      var cats = classify(lines);
+      var counts = {error: 0, warning: 0, connection: 0};
+      var anyOn = Object.keys(on).length > 0;
+      var frag = document.createDocumentFragment();
+      lines.forEach(function (line, i) {
+        if (!line.trim()) return;
+        cats[i].forEach(function (k) { counts[k]++; });
+        if (f && line.toLowerCase().indexOf(f) === -1) return;
+        if (anyOn && !cats[i].some(function (k) { return on[k]; })) return;
+        var span = document.createElement('span');
+        // Colour by the most severe category the line belongs to
+        var first = CATEGORIES.find(function (k) { return cats[i].indexOf(k) !== -1; });
+        if (first) span.className = 'l-' + first;
+        span.textContent = line + '\n';
+        frag.appendChild(span);
+      });
+      CATEGORIES.forEach(function (k) { $('[data-cnt=' + k + ']').text('(' + counts[k] + ')'); });
       var atBottom = out.scrollHeight - out.scrollTop - out.clientHeight < 30;
-      out.textContent = text;
+      out.textContent = '';
+      out.appendChild(frag);
       if (atBottom) out.scrollTop = out.scrollHeight;
+    }
+
+    function setLevels(values) {
+      $('#log_levels input').each(function () { this.checked = values.indexOf(this.value) !== -1; });
+      store('only', values.join(','));
+      render();
     }
 
     function fillSources(keepValue) {
@@ -104,6 +178,12 @@
     $('#log_interval').on('change', function () { store('interval', this.value); schedule(); });
     $('#log_refresh').on('click', fetchLogs);
     $('#log_filter').on('input', render);
+    $('#log_levels input').on('change', function () {
+      store('only', $('#log_levels input:checked').map(function () { return this.value; }).get().join(','));
+      render();
+    });
+    $('#log_only_problems').on('click', function () { setLevels(['error', 'warning']); });
+    $('#log_all_levels').on('click', function () { setLevels([]); });
     $('#log_download').on('click', function () {
       var a = document.createElement('a');
       a.href = URL.createObjectURL(new Blob([raw], {type: 'text/plain'}));
@@ -118,6 +198,10 @@
     if (load('interval')) $('#log_interval').val(load('interval'));
     if (load('auto') === '0') $('#log_auto').prop('checked', false);
     if (load('type')) $('#log_type').val(load('type'));
+    if (load('only')) {
+      var saved = load('only').split(',');
+      $('#log_levels input').each(function () { this.checked = saved.indexOf(this.value) !== -1; });
+    }
 
     fetch('/logs/sources').then(function (r) { return r.json(); }).then(function (d) {
       sources = d;

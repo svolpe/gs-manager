@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block title %}Discord Notification Log{% endblock %}
+
+{% block content %}
+  <a href="{{ url_for('discord.index') }}">Back</a>
+  <table id="t_discord_log" class="display">
+    <thead>
+      <tr><th>Time (UTC)</th><th>Channel</th><th>Player</th><th>Character</th><th>Server</th><th>Sent</th><th>Error</th></tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td>{{ r.time }}</td><td>{{ r.channel }}</td><td>{{ r.player }}</td><td>{{ r.character }}</td>
+        <td>{{ r.server }}</td><td>{{ 'Yes' if r.success else 'No' }}</td><td>{{ r.error }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  $(document).ready(function(){ new DataTable('#t_discord_log', {order: [[0, 'desc']]}); });
+</script>
+{% endblock %}

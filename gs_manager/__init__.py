@@ -6,6 +6,8 @@ from .models.users import User
 from .models.blog import Post
 from .models.server_nwn import (ServerConfigs, ServerCmds, PcActiveLog, VolumesInfo, VolumesDirs, ServerVolumes,
                                 ServerStatus)
+from .models.discord import DiscordChannel, DiscordChannelServer, DiscordWatchedPlayer, DiscordNotifyLog, \
+                             DiscordPlayerGroup, DiscordPlayerGroupMember, DiscordChannelGroup
 from flask import Flask, render_template
 from flask_socketio import SocketIO
 from flask_session import Session
@@ -80,6 +82,9 @@ def create_app(test_config=None):
 
     from .routes import logs
     app.register_blueprint(logs.lg)
+
+    from .routes import discord
+    app.register_blueprint(discord.dc)
 
     # Ported to using a class
     from .routes.file_manager import FileManagerBp

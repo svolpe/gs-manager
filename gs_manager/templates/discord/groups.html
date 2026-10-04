@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block title %}Discord Player Groups{% endblock %}
+
+{% block content %}
+  {% for message in get_flashed_messages() %}<div class="flash">{{ message }}</div>{% endfor %}
+  <a href="{{ url_for('discord.group_create') }}">New group</a> |
+  <a href="{{ url_for('discord.index') }}">Back to channels</a>
+  <table id="t_groups" class="display">
+    <thead>
+      <tr><th>Name</th><th>Players</th><th>Used by channels</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td>{{ r.group.name }}</td>
+        <td>{{ r.members | join(', ') }}</td>
+        <td>{{ r.channels }}</td>
+        <td>
+          <a href="{{ url_for('discord.group_update', id=r.group.id) }}">Edit</a>
+          <form method="POST" action="{{ url_for('discord.group_delete', id=r.group.id) }}" style="display:inline"
+                onsubmit="return confirm('Delete this group? It will be removed from {{ r.channels }} channel(s).');">
+            <button type="submit">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  $(document).ready(function(){ new DataTable('#t_groups', {paging: false}); });
+</script>
+{% endblock %}

@@ -61,6 +61,19 @@ def sql_data_to_list_of_dicts(select_query):
         con.close()
 
 
+def sql_query(query, params=()):
+    """Parameterised select returning a list of dicts. Returns [] on failure."""
+    con = sqlite3.connect(DBPATH)
+    try:
+        con.row_factory = sqlite3.Row
+        return [dict(row) for row in con.execute(query, params).fetchall()]
+    except Exception as e:
+        print(f"Failed to execute. Query: {query}\n with error:\n{e}")
+        return []
+    finally:
+        con.close()
+
+
 def sql_data_return_dict_of_dict(dict_key, select_query):
     con = sqlite3.connect(DBPATH)
     try:

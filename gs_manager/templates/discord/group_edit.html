@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'Edit' if group else 'New' }} Player Group{% endblock %}
+
+{% block content %}
+  {% for message in get_flashed_messages() %}<div class="flash">{{ message }}</div>{% endfor %}
+  {% for field, errors in form.errors.items() %}{% for e in errors %}<div class="flash">{{ form[field].label.text }}: {{ e }}</div>{% endfor %}{% endfor %}
+  <form method="POST">
+    {{ form.csrf_token }}
+    <p>{{ form.name.label }} {{ form.name }}</p>
+    <p>{{ form.players.label }}<br>
+       <input type="text" id="player_filter" placeholder="Filter players..."><br>
+       {{ form.players(size=16, style="min-width: 24em") }}<br>
+       <small>Known players from login history. Ctrl/Cmd-click to select several.</small></p>
+    <input type="submit" value="Save">
+    <a href="{{ url_for('discord.groups') }}">Cancel</a>
+  </form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.getElementById('player_filter').addEventListener('input', function(e) {
+    var q = e.target.value.toLowerCase();
+    document.querySelectorAll('#players option').forEach(function(o) {
+      o.hidden = q && o.text.toLowerCase().indexOf(q) === -1;
+    });
+  });
+</script>
+{% endblock %}

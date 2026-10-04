@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'Edit' if channel else 'New' }} Discord Channel{% endblock %}
+
+{% block content %}
+  {% for message in get_flashed_messages() %}<div class="flash">{{ message }}</div>{% endfor %}
+  {% for field, errors in form.errors.items() %}{% for e in errors %}<div class="flash">{{ form[field].label.text }}: {{ e }}</div>{% endfor %}{% endfor %}
+  <form method="POST">
+    {{ form.csrf_token }}
+    <p>{{ form.name.label }} {{ form.name }}</p>
+    <p>{{ form.webhook_url.label }} {{ form.webhook_url(size=80) }}</p>
+    <p>{{ form.enabled }} {{ form.enabled.label }}</p>
+    <p>{{ form.cooldown_minutes.label }} {{ form.cooldown_minutes }}
+       <br><small>No new message if the player was online on any of this channel's servers within this many minutes.</small></p>
+    <p>{{ form.servers.label }}<br>
+       {{ form.servers(size=10, style="min-width: 24em") }}<br>
+       <small>Ctrl/Cmd-click to select several. All selected servers post to this one channel.</small></p>
+    <p>{{ form.groups.label }}<br>
+       {{ form.groups(size=6, style="min-width: 24em") }}<br>
+       <small>Members are looked up at login time, so editing a group updates every channel using it.
+       <a href="{{ url_for('discord.groups') }}">Manage groups</a></small></p>
+    <p>{{ form.players.label }}<br>
+       <input type="text" id="player_filter" placeholder="Filter players..."><br>
+       {{ form.players(size=14, style="min-width: 24em") }}<br>
+       <small>Optional, for one-offs not in a group. Known players from login history. Ctrl/Cmd-click to select several.</small></p>
+    <input type="submit" value="Save">
+    <a href="{{ url_for('discord.index') }}">Cancel</a>
+  </form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Hide non-matching options in the player list; selected options stay selected (just hidden)
+  document.getElementById('player_filter').addEventListener('input', function(e) {
+    var q = e.target.value.toLowerCase();
+    document.querySelectorAll('#players option').forEach(function(o) {
+      o.hidden = q && o.text.toLowerCase().indexOf(q) === -1;
+    });
+  });
+</script>
+{% endblock %}

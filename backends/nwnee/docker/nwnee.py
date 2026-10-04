@@ -4,6 +4,7 @@ import time
 import db
 from backends.nwnee.config import ProductionConfig as backend_config
 import threading
+import discord_notify
 
 #This thread function currently checks for new start/stop commands
 # and marks them as stopping or starting to make the reaction time for
@@ -27,6 +28,7 @@ if __name__ == "__main__":
     stop_flag = threading.Event()
     thread = threading.Thread(target=check_cmds_thread, args=(stop_flag,))
     thread.start()
+    discord_notify.start_sender(stop_flag)
     servers = {}
     
     while True:
@@ -113,7 +115,7 @@ if __name__ == "__main__":
 
                 status = server.container_status()
                 if status == 'running':
-                    active_users.update(server.get_active_users())
+                    active_users.update(server.get_active_users() or {})
 
             get_users_timer_start = time.time()
             last_active_users = db.sql_data_return_dict_of_dict("cd_key",
@@ -124,6 +126,7 @@ if __name__ == "__main__":
             # Update users table
             if len(last_active_users) or len(active_users):
                 insert_data = list()
+                new_logins = list()
                 update_data = list()
                 logoff_data = list()
 
@@ -135,6 +138,10 @@ if __name__ == "__main__":
                         user = active_users[key]
                         insert_data.append((key, user['player_name'], user['character_name'], user['ip_addr'],
                                             user['docker_name'], user['server_name']))
+                        new_logins.append({'player_name': user['player_name'],
+                                           'character_name': user['character_name'], 'cd_key': key,
+                                           'server_cfg_id': int(user['docker_name'].replace('nwn_', '', 1)),
+                                           'server_name': user['server_name']})
                     # Users that are on-going active and need to be updated
                     elif key in active_users:
                         a_user = active_users[key]
@@ -151,6 +158,11 @@ if __name__ == "__main__":
                     query = '''insert into pc_active_log(cd_key, player_name, character_name, ip_addr, docker_name, 
                             server_name) values(?, ?, ?, ?, ?, ?)'''
                     db.sql_update_many(query, insert_data)
+                    # Must run after the insert so open-session checks see the new rows
+                    try:
+                        discord_notify.handle_logins(new_logins)
+                    except Exception as e:
+                        print(f"ERROR: discord login notification failed: {e}")
                 if len(update_data):
                     query = '''update pc_active_log set player_name=?, character_name=?, ip_addr=?, docker_name=?, 
                     server_name=?, cd_key = ? where id = ?'''

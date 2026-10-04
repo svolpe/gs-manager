@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block title %}Discord Notifications{% endblock %}
+
+{% block content %}
+  {% for message in get_flashed_messages() %}<div class="flash">{{ message }}</div>{% endfor %}
+  <a href="{{ url_for('discord.create') }}">New channel</a> |
+  <a href="{{ url_for('discord.groups') }}">Player groups</a> |
+  <a href="{{ url_for('discord.log') }}">Notification log</a>
+  <table id="t_discord" class="display">
+    <thead>
+      <tr><th>Name</th><th>Enabled</th><th>Servers</th><th>Player groups</th><th>Individual players</th><th>Cooldown</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td>{{ r.channel.name }}</td>
+        <td>{{ 'Yes' if r.channel.enabled else 'No' }}</td>
+        <td>{{ r.servers }}</td>
+        <td>{{ r.groups }}</td>
+        <td>{{ r.players }}</td>
+        <td>{{ r.channel.cooldown_minutes }} min</td>
+        <td>
+          <a href="{{ url_for('discord.update', id=r.channel.id) }}">Edit</a>
+          <form method="POST" action="{{ url_for('discord.test', id=r.channel.id) }}" style="display:inline">
+            <button type="submit">Test</button>
+          </form>
+          <form method="POST" action="{{ url_for('discord.delete', id=r.channel.id) }}" style="display:inline"
+                onsubmit="return confirm('Delete this channel?');">
+            <button type="submit">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  $(document).ready(function(){ new DataTable('#t_discord', {paging: false}); });
+</script>
+{% endblock %}

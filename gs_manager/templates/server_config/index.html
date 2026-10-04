@@ -24,6 +24,9 @@
   $(document).ready(function(){
     var table = new DataTable('#t_serv_cfg',{
       "ajax": "/cfg_data",
+      // Remember search text, sort order, page and page length across reloads (browser localStorage, no expiry)
+      stateSave: true,
+      stateDuration: 0,
       columnDefs: [
         {
           render: function ( data, type, row ) {

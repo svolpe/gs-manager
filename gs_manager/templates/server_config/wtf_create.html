@@ -38,6 +38,9 @@
     <p>{{ form.reload_when_empty.label }} {{ form.reload_when_empty(style="list-style:none") }}</p>
     <p>{{ form.image.label }} {{ form.image }}</p>
     <p>{{ form.volumes.label }} {{ form.volumes }}</p>
+    <p>{{ form.extra_env.label }}<br>{{ form.extra_env }}<br>
+       <small>One KEY=value per line, for example NWNX_DOTNET_SKIP=y. Blank lines and lines starting with # are ignored.
+       Applied when the server is (re)started. The settings above can't be overridden here.</small></p>
     <p>{{ form.database.label }} {{ form.database(style="list-style:none") }}</p>
     <p>{{ form.is_active.label }} {{ form.is_active(style="list-style:none") }}</p>
     <input type="submit" value="Submit">

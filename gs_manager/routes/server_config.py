@@ -9,6 +9,7 @@ from ..extensions import db, clone_model
 from ..models.server_nwn import (ServerConfigs, ServerCmds, VolumesInfo, ServerVolumes, VolumesDirs,
                                 ServerStatus, SystemWatchdog)
 
+from backends.nwnee.env_vars import parse_env_text
 from .server_config_forms import ServerConfiguration, ServerConfigDynamic
 
 import os, datetime
@@ -18,6 +19,16 @@ from flask_socketio import emit
 from flask import request
 
 sc = Blueprint('server_config', __name__)
+
+
+def check_extra_env(text):
+    """Validate the extra environment variables text. Flashes problems and returns True if it can be saved."""
+    _, errors, warnings = parse_env_text(text)
+    for msg in errors:
+        flash(f"Extra environment variables, {msg}")
+    for msg in warnings:
+        flash(f"Extra environment variables, {msg}")
+    return not errors
 
 
 def image_choices(current=None):
@@ -215,6 +226,8 @@ def create():
         server_cfg['image'] = server_cfg.get('image', '').strip() or None
         if not server_cfg['server_name']:
             error = 'server name is required.'
+        elif not check_extra_env(server_cfg.get('extra_env')):
+            error = 'fix the extra environment variables.'
 
         if error is not None:
             flash(error)
@@ -288,6 +301,10 @@ def update(id):
     # Process form, this needs to be done after all defaults are set and it needs to be passed the data.
     form.process(data=server_cfg.__dict__)
     error = None
+    if request.method == 'POST' and not check_extra_env(request.form.get('extra_env')):
+        # form.process() above reset the fields to the saved values, so put back what was typed
+        form.extra_env.data = request.form.get('extra_env')
+        return render_template('server_config/wtf_create.html', form=form)
     if request.method == 'POST':
         # Delete old volumes
         ServerVolumes.query.filter(ServerVolumes.server_configs_id == id).delete()

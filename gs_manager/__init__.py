@@ -60,6 +60,9 @@ def create_app(test_config=None):
         if cols and 'image' not in cols:
             db.session.execute(db.text("ALTER TABLE server_configs ADD COLUMN image VARCHAR(200)"))
             db.session.commit()
+        if cols and 'extra_env' not in cols:
+            db.session.execute(db.text("ALTER TABLE server_configs ADD COLUMN extra_env TEXT"))
+            db.session.commit()
 
     # ensure the instance folder exists
     try:

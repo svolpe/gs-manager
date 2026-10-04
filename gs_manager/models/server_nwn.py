@@ -63,6 +63,8 @@ class ServerConfigs(db.Model):
     port = db.Column(db.Integer, nullable=False)
     # Docker image for this config; NULL falls back to the backend's DOCKER_IMAGE
     image = db.Column(db.String(200), nullable=True)
+    # Extra container environment variables, one KEY=value per line (see backends/nwnee/env_vars.py)
+    extra_env = db.Column(db.Text, nullable=True)
     def to_dict(self):{
         'id': self.id,
         'is_active': self.is_active,

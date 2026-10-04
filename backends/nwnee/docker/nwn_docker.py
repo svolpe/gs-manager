@@ -2,6 +2,7 @@ import docker
 import time
 import db
 from os import path
+from backends.nwnee.env_vars import parse_env_text
 
 # TODO: It might make sense to remove all the low level string manipulation/extraction methods into their own class
 # TODO: Look into better structuring the __init__. Should the client be passed to the constructor or created inside?
@@ -221,6 +222,14 @@ class NwnServer:
             self._cfg['NWNX_SQL_HOST'] = self.backend_cfg.nwnx_sql_cfg["NWNX_SQL_HOST"]
             self._cfg['NWNX_SQL_PORT'] = self.backend_cfg.nwnx_sql_cfg["NWNX_SQL_PORT"]
             self._cfg['NWNX_SQL_TYPE'] = self.backend_cfg.nwnx_sql_cfg["NWNX_SQL_TYPE"]
+
+        # Per-server extra variables. Applied last so they can override the DB defaults above (for example
+        # NWNX_<PLUGIN>_SKIP=n while NWNX_CORE_SKIP_ALL=y). The form validates on save; errors here only mean the
+        # DB was edited by hand, so skip bad lines and keep going rather than failing to start the server.
+        extra_env, errors, _ = parse_env_text(self.server_cfg.get('extra_env'))
+        for msg in errors:
+            print(f"WARNING: server {self.server_cfg_id} extra_env ignored, {msg}")
+        self._cfg.update(extra_env)
 
 
         # unused NWN environment variables:

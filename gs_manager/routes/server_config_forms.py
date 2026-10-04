@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from flask_wtf import FlaskForm
-from wtforms import StringField, FieldList, SelectField, RadioField, IntegerField, SelectMultipleField, FormField
+from wtforms import StringField, FieldList, SelectField, RadioField, IntegerField, SelectMultipleField, FormField, TextAreaField
 from wtforms.validators import InputRequired, NumberRange
 
 class ServerConfiguration(FlaskForm):
@@ -37,6 +37,9 @@ class ServerConfiguration(FlaskForm):
     reload_when_empty = RadioField('Reload When Empty', choices=[(1, 'Yes'), (0, 'No')], validators=[InputRequired()])
     image = SelectField("Docker Image", choices=[('', 'Default')])
     volumes = SelectMultipleField()
+    extra_env = TextAreaField("Extra Environment Variables",
+                              render_kw={'rows': 10, 'cols': 60, 'spellcheck': 'false',
+                                         'placeholder': 'NWNX_DOTNET_SKIP=y\nNWNX_EVENTS_SKIP=n'})
     database = RadioField('Use SQL Database?', choices=[('yes', 'Yes'), ('no', 'No')], validators=[InputRequired()])
     is_active = RadioField('Server Activate?', choices=[(1, 'Yes'), (0, 'No')], validators=[InputRequired()])
 

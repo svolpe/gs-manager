@@ -25,7 +25,10 @@ class NwnServer:
         return self.server_cfg['server_name']
 
     def remove_container(self):
-        nwn_containers = self.client.containers(all=True, filters={"name": self.docker_name})
+        # The docker name filter is a substring match ("nwn_2" also matches "nwn_20"), so only
+        # accept the container whose name is exactly ours
+        nwn_containers = [c for c in self.client.containers(all=True, filters={"name": self.docker_name})
+                          if f"/{self.docker_name}" in c['Names']]
         if len(nwn_containers) > 0:
             container = nwn_containers[0]
             inspect_dict = self.client.inspect_container(container)

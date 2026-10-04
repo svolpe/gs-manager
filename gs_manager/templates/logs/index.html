@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  {% block title %}Logs{% endblock %}
+{% endblock %}
+
+{% block content %}
+<style>
+  .log-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .log-controls select, .log-controls input[type=text] { max-width: 100%; }
+  #log_out { height: 60vh; overflow: auto; margin: 0; padding: 8px; white-space: pre-wrap; word-break: break-all;
+             font-family: monospace; font-size: 12px; background: #111; color: #ddd; }
+  #log_out.error { color: #f88; }
+  #log_status { font-size: 12px; opacity: 0.8; }
+</style>
+<div class="log-controls">
+  <select id="log_type">
+    <option value="container">Game server</option>
+    <option value="journal">Service (systemd)</option>
+    <option value="file">Volume log file</option>
+    <option value="docker">Docker</option>
+  </select>
+  <select id="log_source"></select>
+  <label>Lines <select id="log_lines">
+    <option>100</option><option selected>500</option><option>1000</option><option>5000</option>
+  </select></label>
+  <label><input type="checkbox" id="log_auto" checked> Auto-refresh</label>
+  <select id="log_interval">
+    <option value="2000">2s</option><option value="5000" selected>5s</option><option value="10000">10s</option>
+    <option value="30000">30s</option>
+  </select>
+  <button type="button" id="log_refresh">Refresh</button>
+  <input type="text" id="log_filter" placeholder="Filter lines">
+  <button type="button" id="log_download">Download</button>
+</div>
+<div id="log_status"></div>
+<pre id="log_out"></pre>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  $(document).ready(function () {
+    var sources = {};
+    var raw = "";
+    var timer = null;
+    var inflight = false;
+    var out = document.getElementById('log_out');
+
+    function store(key, val) { try { localStorage.setItem('logs_' + key, val); } catch (e) {} }
+    function load(key) { try { return localStorage.getItem('logs_' + key); } catch (e) { return null; } }
+
+    function render() {
+      var f = $('#log_filter').val().toLowerCase();
+      var text = raw;
+      if (f) {
+        text = raw.split('\n').filter(function (l) { return l.toLowerCase().indexOf(f) !== -1; }).join('\n');
+      }
+      var atBottom = out.scrollHeight - out.scrollTop - out.clientHeight < 30;
+      out.textContent = text;
+      if (atBottom) out.scrollTop = out.scrollHeight;
+    }
+
+    function fillSources(keepValue) {
+      var type = $('#log_type').val();
+      var $s = $('#log_source').empty();
+      (sources[type] || []).forEach(function (s) { $s.append($('<option>').val(s.id).text(s.name)); });
+      if (keepValue && $s.find('option').filter(function () { return this.value === keepValue; }).length) {
+        $s.val(keepValue);
+      }
+      if (!(sources[type] || []).length) $s.append($('<option>').val('').text('(none available)'));
+    }
+
+    function fetchLogs() {
+      var type = $('#log_type').val(), id = $('#log_source').val();
+      if (inflight || !id) return;
+      inflight = true;
+      fetch('/logs/data?' + new URLSearchParams({type: type, id: id, lines: $('#log_lines').val()}))
+        .then(function (r) {
+          if (r.redirected) { window.location.reload(); throw new Error('login required'); }
+          return r.json();
+        })
+        .then(function (d) {
+          raw = d.text;
+          out.classList.toggle('error', !d.ok);
+          render();
+          $('#log_status').text('Updated ' + new Date().toLocaleTimeString());
+        })
+        .catch(function (e) { $('#log_status').text('Request failed: ' + e); })
+        .finally(function () { inflight = false; });
+    }
+
+    function schedule() {
+      if (timer) clearInterval(timer);
+      timer = null;
+      if ($('#log_auto').is(':checked')) {
+        timer = setInterval(function () { if (!document.hidden) fetchLogs(); }, parseInt($('#log_interval').val(), 10));
+      }
+    }
+
+    $('#log_type').on('change', function () { store('type', this.value); fillSources(); store('source', $('#log_source').val()); fetchLogs(); });
+    $('#log_source').on('change', function () { store('source', this.value); fetchLogs(); });
+    $('#log_lines').on('change', function () { store('lines', this.value); fetchLogs(); });
+    $('#log_auto').on('change', function () { store('auto', this.checked ? '1' : '0'); schedule(); });
+    $('#log_interval').on('change', function () { store('interval', this.value); schedule(); });
+    $('#log_refresh').on('click', fetchLogs);
+    $('#log_filter').on('input', render);
+    $('#log_download').on('click', function () {
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([raw], {type: 'text/plain'}));
+      a.download = ($('#log_type').val() + '_' + $('#log_source').val()).replace(/[^\w.-]+/g, '_') + '.log';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) fetchLogs(); });
+
+    // Restore the previous selections
+    if (load('lines')) $('#log_lines').val(load('lines'));
+    if (load('interval')) $('#log_interval').val(load('interval'));
+    if (load('auto') === '0') $('#log_auto').prop('checked', false);
+    if (load('type')) $('#log_type').val(load('type'));
+
+    fetch('/logs/sources').then(function (r) { return r.json(); }).then(function (d) {
+      sources = d;
+      fillSources(load('source'));
+      schedule();
+      fetchLogs();
+    });
+  });
+</script>
+{% endblock %}

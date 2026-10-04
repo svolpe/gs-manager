@@ -9,13 +9,13 @@ This is the source code for an open-source project for managing NeverWinter Nigh
   * Very basic character editor (not stable)
   * Restful API
   * Viewing Player login history for servers with advanced filtering
+  * Log viewer for game servers, services, volume log files and docker
 * Features under development
   * Support for emailing/texting distribution lists when players log on
     * Will be configurable and will allow for distribution lists
   * Pulling of specific NWN docker versions and updating to latest
   * Selecting different docker images other than nwn
   * Full featured vharacter editor
-  * Log file viewer
   * Unit tests
 * Features considered but not yet planned
   * Revamp integrated file manager to be more modern
@@ -39,6 +39,7 @@ This is the source code for an open-source project for managing NeverWinter Nigh
     ```
     docker pull nwnxee/unified
     ```  
+  * The Logs page reads game server container logs (`docker logs`), systemd units listed in `LOG_SYSTEMD_UNITS`, log files inside configured volumes and docker status. The user running the web app needs access to the docker socket (docker group) and to the journal (`systemd-journal` group) for unit logs.
   * Each server config has an optional "Docker Image" field. Leave it blank to use DOCKER_IMAGE from backends/nwnee/config.py, otherwise `docker pull` the image first.
  * Copy backends/nwnee/config_example.py to the backends/nwnee/config.py
  * Most likely you will NOT need to edit this config.py unless you are also using mysql for a persistant world.

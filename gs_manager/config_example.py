@@ -23,6 +23,9 @@ class ProductionConfig(Config):
     GS_PATH_STORAGE = "/var/tmp/gs-manager/docker_storage"
     CORS_ALLOWED_ORIGINS = "localhost:5000"
     SQLALCHEMY_POOL_SIZE = 50
+    # Log viewer: systemd units that can be read, and the most lines a single request may return
+    LOG_SYSTEMD_UNITS = ['gsmanager', 'nwneebackend']
+    LOG_MAX_LINES = 5000
 
 class DevelopmentConfig(Config):
     """Development config."""
@@ -32,3 +35,6 @@ class DevelopmentConfig(Config):
     GS_PATH_STORAGE = "/var/tmp/gs-manager/docker_storage"
     CORS_ALLOWED_ORIGINS = "localhost:5000"
     SQLALCHEMY_POOL_SIZE = 50
+    # Log viewer: systemd units that can be read, and the most lines a single request may return
+    LOG_SYSTEMD_UNITS = ['gsmanager', 'nwneebackend']
+    LOG_MAX_LINES = 5000

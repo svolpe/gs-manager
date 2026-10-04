@@ -39,6 +39,7 @@ This is the source code for an open-source project for managing NeverWinter Nigh
     ```
     docker pull nwnxee/unified
     ```  
+  * Each server config has an optional "Docker Image" field. Leave it blank to use DOCKER_IMAGE from backends/nwnee/config.py, otherwise `docker pull` the image first.
  * Copy backends/nwnee/config_example.py to the backends/nwnee/config.py
  * Most likely you will NOT need to edit this config.py unless you are also using mysql for a persistant world.
  * Executing the program(s)

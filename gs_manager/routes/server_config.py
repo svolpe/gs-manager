@@ -195,6 +195,7 @@ def create():
         server_cfg = request.form.to_dict()
         if "volumes" in server_cfg:
             del server_cfg["volumes"]
+        server_cfg['image'] = server_cfg.get('image', '').strip() or None
         if not server_cfg['server_name']:
             error = 'server name is required.'
 
@@ -295,6 +296,7 @@ def update(id):
             # TODO: Fix how volumes are handled by the server_cfg so there is no need to manually delete
             if 'volumes' in server_cfg:
                 del server_cfg["volumes"]
+            server_cfg['image'] = server_cfg.get('image', '').strip() or None
 
             ServerConfigs.query.filter_by(id=id).update(server_cfg)
             db.session.commit()

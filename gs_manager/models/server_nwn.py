@@ -61,6 +61,8 @@ class ServerConfigs(db.Model):
     reload_when_empty = db.Column(db.Integer, nullable=False)
     module_name = db.Column(db.String, nullable=False)
     port = db.Column(db.Integer, nullable=False)
+    # Docker image for this config; NULL falls back to the backend's DOCKER_IMAGE
+    image = db.Column(db.String(200), nullable=True)
     def to_dict(self):{
         'id': self.id,
         'is_active': self.is_active,

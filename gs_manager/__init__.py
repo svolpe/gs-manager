@@ -51,6 +51,11 @@ def create_app(test_config=None):
     migrate.init_app(app, db)
     with app.app_context():
         db.create_all()
+        # create_all() doesn't alter existing tables, so add columns introduced later
+        cols = [row[1] for row in db.session.execute(db.text("PRAGMA table_info(server_configs)"))]
+        if cols and 'image' not in cols:
+            db.session.execute(db.text("ALTER TABLE server_configs ADD COLUMN image VARCHAR(200)"))
+            db.session.commit()
 
     # ensure the instance folder exists
     try:

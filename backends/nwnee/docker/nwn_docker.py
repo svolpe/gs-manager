@@ -15,7 +15,7 @@ class NwnServer:
         self._load_nwn_cfg()
         self.client = docker.APIClient()
         self._socket = None
-        self.image_name = backend_cfg.DOCKER_IMAGE
+        self.image_name = server_cfg.get('image') or backend_cfg.DOCKER_IMAGE
         self.network = backend_cfg.DOCKER_NETWORK
         self.docker_name = docker_name
         self.container = None

@@ -9,6 +9,7 @@
         <tr>
             <th>ID</th>
             <th>Server</th>
+            <th>Port</th>
             <th>Delete</th>
             <th>Status</th>
             <th>Action</th>
@@ -26,6 +27,8 @@
       columnDefs: [
         {
           render: function ( data, type, row ) {
+            // Sort/search on the plain server name, not the display markup
+            if (type !== 'display') return row.server;
             return "<div class='title_txt'>"+row.server+"</div><br>"+"<div class='about'>"+row.module+" on port "+row.port+"</div>";
           },
           targets: [1]
@@ -34,7 +37,7 @@
           render: function ( data, type, row ) {
             return "<div class='status_"+row.severity +"'>"+row.status+"</div>";
           },
-          targets: [3]
+          targets: [4]
         },
         {
           target: 0,
@@ -44,6 +47,7 @@
       columns: [
         { data: "id"},
         { data: "server"},
+        { data: "port", className: 'dt-center'},
         {
           data: null,
           className: 'dt-center editor-delete',

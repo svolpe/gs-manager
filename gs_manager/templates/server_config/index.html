@@ -32,7 +32,7 @@
           render: function ( data, type, row ) {
             // Sort/search on the plain server name, not the display markup
             if (type !== 'display') return row.server;
-            return "<div class='title_txt'>"+row.server+"</div><br>"+"<div class='about'>"+row.module+" on port "+row.port+"</div>";
+            return "<div class='title_txt'>"+row.server+"</div><br>"+"<div class='about'>"+row.module+"</div>";
           },
           targets: [1]
         },

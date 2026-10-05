@@ -18,12 +18,17 @@
           <input name="folder" type="text" value="new_folder"/>
         </form>
 
-        <form name="fupload" action = "/file_manager/upload" onsubmit="return validateForm()" method = "post" enctype="multipart/form-data">
+        <form name="fupload" action = "/file_manager/upload" onsubmit="return startUpload(event)" method = "post" enctype="multipart/form-data">
           <label> Upload File: </label>
             <input type="file" name="file" />
             <input type="hidden" id="cwd", name="cwd", value="{{ cwd }}">
-            <input type = "submit" value="Upload">
+            <input type = "submit" id="upload_btn" value="Upload">
+            <button type="button" id="upload_cancel" hidden>Cancel</button>
         </form>
+        <div id="upload_box" hidden>
+          <progress id="upload_progress" max="100" value="0" style="width: 20em"></progress>
+          <span id="upload_status"></span>
+        </div>
 
       <table class="file_table">
         <tr>
@@ -90,6 +95,77 @@
         alert("File must be selected");
         return false;
       }
+      return true;
+    }
+
+    function formatBytes(n) {
+      const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+      let i = 0;
+      while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+      return n.toFixed(i === 0 ? 0 : 1) + ' ' + units[i];
+    }
+
+    // Uploads with XMLHttpRequest instead of a plain form post so the browser can report progress.
+    function startUpload(event) {
+      if (!validateForm()) { return false; }
+      event.preventDefault();
+
+      const form = document.forms["fupload"];
+      const btn = document.getElementById("upload_btn");
+      const cancelBtn = document.getElementById("upload_cancel");
+      const box = document.getElementById("upload_box");
+      const bar = document.getElementById("upload_progress");
+      const status = document.getElementById("upload_status");
+
+      const finish = (msg) => {
+        btn.disabled = false;
+        cancelBtn.hidden = true;
+        window.onbeforeunload = null;
+        status.textContent = msg;
+      };
+
+      const xhr = new XMLHttpRequest();
+      const started = Date.now();
+      xhr.open("POST", form.action);
+
+      xhr.upload.onprogress = (e) => {
+        if (!e.lengthComputable) { status.textContent = "Uploading..."; return; }
+        const pct = Math.floor(e.loaded / e.total * 100);
+        bar.value = pct;
+        const secs = Math.max((Date.now() - started) / 1000, 0.001);
+        const rate = e.loaded / secs;
+        let msg = pct + "% - " + formatBytes(e.loaded) + " of " + formatBytes(e.total) + " - " + formatBytes(rate) + "/s";
+        if (pct < 100) {
+          const eta = Math.round((e.total - e.loaded) / rate);
+          msg += " - about " + (eta >= 60 ? Math.floor(eta / 60) + "m " + (eta % 60) + "s" : eta + "s") + " left";
+        }
+        status.textContent = msg;
+      };
+      // All bytes are sent, but the server still has to save the file before it answers
+      xhr.upload.onload = () => { bar.value = 100; status.textContent = "Upload sent, saving on the server..."; };
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          // The upload route redirects back to the folder listing, so this is the refreshed page
+          window.onbeforeunload = null;
+          window.location.href = xhr.responseURL || window.location.href;
+        } else {
+          finish("Upload failed (HTTP " + xhr.status + ")");
+        }
+      };
+      xhr.onerror = () => finish("Upload failed (network error)");
+      xhr.onabort = () => finish("Upload cancelled");
+
+      cancelBtn.onclick = () => xhr.abort();
+      btn.disabled = true;
+      cancelBtn.hidden = false;
+      box.hidden = false;
+      bar.value = 0;
+      status.textContent = "Starting...";
+      // Leaving the page would silently kill the upload
+      window.onbeforeunload = () => true;
+      xhr.send(new FormData(form));
+      return false;
     }
       </script>
         

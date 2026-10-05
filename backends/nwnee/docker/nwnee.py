@@ -138,10 +138,10 @@ if __name__ == "__main__":
                         user = active_users[key]
                         insert_data.append((key, user['player_name'], user['character_name'], user['ip_addr'],
                                             user['docker_name'], user['server_name']))
-                        new_logins.append({'player_name': user['player_name'],
-                                           'character_name': user['character_name'], 'cd_key': key,
-                                           'server_cfg_id': int(user['docker_name'].replace('nwn_', '', 1)),
-                                           'server_name': user['server_name']})
+                        # Discord is only told once a character has been picked; players still at the character
+                        # select screen are announced when the update branch below sees the name change
+                        if discord_notify.character_selected(user['character_name']):
+                            new_logins.append(discord_notify.login_event(key, user))
                     # Users that are on-going active and need to be updated
                     elif key in active_users:
                         a_user = active_users[key]
@@ -149,6 +149,10 @@ if __name__ == "__main__":
                         if (a_user['character_name'] != l_user['character_name']
                                 or a_user['docker_name'] != l_user['docker_name']):
                             user = active_users[key]
+                            # Went from "no character" to a real character: this is the login to announce
+                            if (not discord_notify.character_selected(l_user['character_name'])
+                                    and discord_notify.character_selected(a_user['character_name'])):
+                                new_logins.append(discord_notify.login_event(key, user))
                             update_data.append((user['player_name'], user['character_name'], user['ip_addr'],
                                                 user['docker_name'], user['server_name'], key, last_active_users[key]['id']))
                     # All remaining ones need to be set as logged off
@@ -158,11 +162,6 @@ if __name__ == "__main__":
                     query = '''insert into pc_active_log(cd_key, player_name, character_name, ip_addr, docker_name, 
                             server_name) values(?, ?, ?, ?, ?, ?)'''
                     db.sql_update_many(query, insert_data)
-                    # Must run after the insert so open-session checks see the new rows
-                    try:
-                        discord_notify.handle_logins(new_logins)
-                    except Exception as e:
-                        print(f"ERROR: discord login notification failed: {e}")
                 if len(update_data):
                     query = '''update pc_active_log set player_name=?, character_name=?, ip_addr=?, docker_name=?, 
                     server_name=?, cd_key = ? where id = ?'''
@@ -170,6 +169,12 @@ if __name__ == "__main__":
                 if len(logoff_data):
                     query = '''update pc_active_log set logoff_time = CURRENT_TIMESTAMP where id = ?'''
                     db.sql_update_many(query, logoff_data)
+                # Must run after the session rows are written so the open-session checks see them
+                if len(new_logins):
+                    try:
+                        discord_notify.handle_logins(new_logins)
+                    except Exception as e:
+                        print(f"ERROR: discord login notification failed: {e}")
 
         # Sleep to release the CPU for other processing
         time.sleep(1)

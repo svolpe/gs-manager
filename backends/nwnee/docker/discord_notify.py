@@ -8,6 +8,21 @@ import requests
 import db
 
 _queue = queue.Queue()
+
+# What the server's status table shows for a player who has connected but not picked a character yet
+NO_CHARACTER = 'no character'
+
+
+def character_selected(character_name):
+    """True once the player has chosen a character (the status table shows 'no character' until then)."""
+    name = (character_name or '').strip().lower()
+    return name not in ('', NO_CHARACTER)
+
+
+def login_event(cd_key, user):
+    """Build the dict handle_logins() expects from a parsed status-table user."""
+    return {'player_name': user['player_name'], 'character_name': user['character_name'], 'cd_key': cd_key,
+            'server_cfg_id': int(user['docker_name'].replace('nwn_', '', 1)), 'server_name': user['server_name']}
 _MD_SPECIAL = re.compile(r'([\\*_`~|>:])')
 
 
@@ -68,9 +83,9 @@ def start_sender(stop_flag):
 
 
 def handle_logins(new_logins):
-    """new_logins: list of dicts with player_name, character_name, cd_key, server_cfg_id, server_name.
+    """new_logins: list of dicts (see login_event) for players who have just logged in AND selected a character.
 
-    Must be called after the new rows were inserted into pc_active_log."""
+    Must be called after the session rows were written to pc_active_log."""
     for login in new_logins:
         channels = db.sql_query(
             "SELECT c.id, c.webhook_url, c.cooldown_minutes FROM discord_channel c "
